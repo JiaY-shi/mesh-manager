@@ -1,0 +1,4 @@
+config service 'main'
+	option confirmation_timeout '120'
+	option candidate_timeout '300'
+	option controller_loss_timeout '300'

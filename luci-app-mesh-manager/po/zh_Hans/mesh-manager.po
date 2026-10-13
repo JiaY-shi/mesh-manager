@@ -1,0 +1,2470 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: luci-app-mesh-manager\n"
+"Language: zh_Hans\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=1; plural=0;\n"
+
+msgid "802.11k supplies neighbor information; 802.11v suggests transitions; 802.11r accelerates authentication. Clients decide when to roam. Steering requires usteer and must not run alongside DAWN."
+msgstr "802.11k 提供邻居信息，802.11v 建议切换接入点，802.11r 加快重新认证。最终由终端决定何时漫游。启用漫游引导需要 usteer，不能与 DAWN 同时运行。"
+
+msgid "802.11s backhaul identifier, separate from the client SSID. All managed backhaul radios must use the same identifier."
+msgstr "802.11s 回程网络标识，与终端连接的 SSID 不同。所有受管回程射频必须使用相同标识。"
+
+msgid "802.11s wireless"
+msgstr "802.11s 无线回程"
+
+msgid "A display name for this device; it does not change its cryptographic identity."
+msgstr "本设备的显示名称，不会改变设备的加密身份。"
+
+msgid "A display name only. Each network has one controller identity; matching names do not authorize a device."
+msgstr "仅用于显示。每个网络只有一个控制器身份；名称相同不代表设备已获得授权。"
+
+msgid "A local override, not synchronized to other nodes. Choose an unused address outside the upstream DHCP pool."
+msgstr "这是本机覆盖配置，不会同步给其他节点。请选择未被使用、且不在上级 DHCP 地址池内的地址。"
+
+msgid "A shared fixed channel for the selected backhaul band. Regulatory limits and DFS waiting periods still apply."
+msgstr "选定回程频段使用的统一固定信道，仍需遵守所在国家的法规和 DFS 等待时间。"
+
+msgid "AP nodes obtain management addresses from the existing gateway by default."
+msgstr "AP 节点默认从现有网关获取管理地址。"
+
+msgid "AP node"
+msgstr "AP 节点"
+
+msgid "AP uplink port"
+msgstr "AP 上联端口"
+
+msgid "Actions"
+msgstr "操作"
+
+msgid "After"
+msgstr "修改后"
+
+msgid "All backhaul radios must support this width; a higher width does not guarantee higher throughput."
+msgstr "所有回程射频都必须支持此带宽；更大的信道带宽不一定带来更高的实际吞吐量。"
+
+msgid "All-node preflight"
+msgstr "全节点预检"
+
+msgid "Apply candidate"
+msgstr "应用候选配置"
+
+msgid "Apply queued"
+msgstr "等待应用"
+
+msgid "Apply reviewed cluster changes"
+msgstr "应用已审阅的全网变更"
+
+msgid "Applying"
+msgstr "正在应用"
+
+msgid "Approve"
+msgstr "确认授权"
+
+msgid "Approve legacy mesh takeover"
+msgstr "允许接管旧 Mesh 配置"
+
+msgid "Approve takeover and apply"
+msgstr "确认接管并应用"
+
+msgid "Approved"
+msgstr "已授权"
+
+msgid "Authorize this device identity"
+msgstr "授权此设备身份"
+
+msgid "Authorized"
+msgstr "已授权"
+
+msgid "Automatic rollback in %s seconds"
+msgstr "%s 秒后自动回滚"
+
+msgid "Available"
+msgstr "可用"
+
+msgid "Awaiting confirmation"
+msgstr "等待健康确认"
+
+msgid "Backend unavailable"
+msgstr "后台服务不可用"
+
+msgid "Backhaul"
+msgstr "回程"
+
+msgid "Backhaul channel"
+msgstr "回程信道"
+
+msgid "Backhaul mode"
+msgstr "回程模式"
+
+msgid "Before"
+msgstr "修改前"
+
+msgid "Both Root modes manage AP nodes. Root router provides DHCP and NAT; Root bridge uses an existing upstream gateway and does not provide DHCP or NAT."
+msgstr "两种主节点都能管理 AP。路由主节点提供 DHCP 和 NAT；桥接主节点使用已有上级网关，不提供 DHCP 或 NAT。"
+
+msgid "Bridge gateway override"
+msgstr "桥接管理网关覆盖"
+
+msgid "CA fingerprint"
+msgstr "CA 证书指纹"
+
+msgid "Cancel"
+msgstr "取消"
+
+msgid "Carrier"
+msgstr "物理链路"
+
+msgid "Change preview"
+msgstr "变更预览"
+
+msgid "Changes"
+msgstr "变更记录"
+
+msgid "Channel"
+msgstr "信道"
+
+msgid "Channel width"
+msgstr "信道带宽"
+
+msgid "Client address"
+msgstr "终端地址"
+
+msgid "Clients"
+msgstr "终端"
+
+msgid "Close"
+msgstr "关闭"
+
+msgid "Cluster transaction"
+msgstr "全网事务"
+
+msgid "Committed"
+msgstr "已提交"
+
+msgid "Complete"
+msgstr "已完成"
+
+msgid "Configuration drift"
+msgstr "配置偏差"
+
+msgid "Configuration version"
+msgstr "配置版本"
+
+msgid "Configure managed client access points on the selected local radios. Existing APs require explicit takeover approval."
+msgstr "在选定的本机射频上创建受管终端接入点；已有 AP 必须经明确授权后才能接管。"
+
+msgid "Confirm"
+msgstr "确认提交"
+
+msgid "Wireless capability checks did not complete. Retry the preview when the device is less busy."
+msgstr "无线能力检查未完成，请在设备负载降低后重新预览。"
+
+msgid "The selected radio capabilities could not be verified. Retry the preview before applying."
+msgstr "无法确认所选射频的能力，请重新预览后再应用。"
+
+msgid "The selected radio does not support the requested backhaul width. Choose a width supported by every node."
+msgstr "所选射频不支持要求的回程带宽，请选择所有节点都支持的带宽。"
+
+msgid "Enter the bootstrap Wi-Fi name and password."
+msgstr "请填写引导 Wi-Fi 名称和密码。"
+
+msgid "Reconnect wireless joining"
+msgstr "恢复无线加入"
+
+msgid "The bootstrap Wi-Fi network was not found. Check the SSID and radio, then scan again."
+msgstr "未找到引导 Wi-Fi，请检查名称和射频后重新扫描。"
+
+msgid "Confirming"
+msgstr "正在确认"
+
+msgid "Controller"
+msgstr "管理主节点"
+
+msgid "Controller LAN address"
+msgstr "控制器 LAN 地址"
+
+msgid "Controller address"
+msgstr "控制器地址"
+
+msgid "Controller gateway role"
+msgstr "主节点网关角色"
+
+msgid "Controller identity"
+msgstr "控制器身份"
+
+msgid "Coordinated controller address migration is not implemented; preserve the existing static LAN address"
+msgstr "尚未实现控制器地址迁移协调，请保留现有静态 LAN 地址。"
+
+msgid "Coordinated wired maintenance"
+msgstr "有线协调维护"
+
+msgid "Country"
+msgstr "国家 / 地区"
+
+msgid "Create a Mesh controller"
+msgstr "创建 Mesh 管理主节点"
+
+msgid "Create controller"
+msgstr "创建管理主节点"
+
+msgid "Dependency"
+msgstr "依赖组件"
+
+msgid "Details"
+msgstr "详情"
+
+msgid "Device identity"
+msgstr "设备身份"
+
+msgid "Diagnostics"
+msgstr "诊断"
+
+msgid "Down"
+msgstr "未连接"
+
+msgid "Link down"
+msgstr "链路未连接"
+
+msgid "Link up"
+msgstr "链路已连接"
+
+msgid "Discovered controllers"
+msgstr "已发现的控制器"
+
+msgid "Refresh discovery"
+msgstr "刷新发现"
+
+msgid "Wired discovery unavailable"
+msgstr "有线发现不可用"
+
+msgid "No Mesh controllers found"
+msgstr "未发现 Mesh 控制器"
+
+msgid "Unverified announcement"
+msgstr "未验证的广播"
+
+msgid "Join this network"
+msgstr "加入此网络"
+
+msgid "Download redacted diagnostics"
+msgstr "下载脱敏诊断"
+
+msgid "Encryption"
+msgstr "加密方式"
+
+msgid "Enter a new passphrase"
+msgstr "输入新密码"
+
+msgid "Existing LAN port"
+msgstr "现有 LAN 端口"
+
+msgid "Exit management"
+msgstr "退出托管"
+
+msgid "Expired"
+msgstr "已过期"
+
+msgid "Explicitly disable an existing mesh interface before creating managed backhaul to avoid competing paths and loops. Original settings remain available for restoration."
+msgstr "创建受管回程前，明确禁用已有 Mesh 接口，避免竞争路径和二层环路。原配置会保留，供退出托管时恢复。"
+
+msgid "Failed"
+msgstr "失败"
+
+msgid "Four hexadecimal digits shared by nodes using fast roaming. Changing this may interrupt connected clients."
+msgstr "使用快速漫游的节点共享的四位十六进制标识。修改此值可能中断已连接的终端。"
+
+msgid "Gateway role"
+msgstr "网关角色"
+
+msgid "Health check"
+msgstr "健康检查"
+
+msgid "I approve configuration takeover and understand automatic rollback"
+msgstr "我确认接管所列配置，并了解自动回滚机制"
+
+msgid "I approve the displayed configuration takeover"
+msgstr "我确认接管界面中列出的配置"
+
+msgid "IPv4 address"
+msgstr "IPv4 地址"
+
+msgid "Identity"
+msgstr "身份"
+
+msgid "Independent SAE passphrase"
+msgstr "独立 SAE 回程密码"
+
+msgid "Inspect all-node changes"
+msgstr "查看所有节点变更"
+
+msgid "Intent version"
+msgstr "意图版本"
+
+msgid "Interface"
+msgstr "接口"
+
+msgid "Join the selected Mesh network"
+msgstr "加入选定的 Mesh 网络"
+
+msgid "Joining request"
+msgstr "加入申请"
+
+msgid "LAN address"
+msgstr "LAN 地址"
+
+msgid "Leave empty to keep the existing managed passphrase. A first configuration requires an 8 to 63 character passphrase. Secrets are never returned by status or preview."
+msgstr "留空可保留已有受管密码。首次配置需要 8 至 63 位密码；状态和预览接口不会返回密码。"
+
+msgid "Local configuration"
+msgstr "本机配置"
+
+msgid "Local node"
+msgstr "本机节点"
+
+msgid "Local overrides"
+msgstr "本机覆盖配置"
+
+msgid "Local radios"
+msgstr "本机射频"
+
+msgid "Manage wireless AP"
+msgstr "托管无线接入点"
+
+msgid "Manage wireless APs"
+msgstr "托管无线接入点"
+
+msgid "Management address"
+msgstr "管理地址"
+
+msgid "Management addresses"
+msgstr "管理地址"
+
+msgid "Last reported"
+msgstr "最后上报"
+
+msgid "Paired address"
+msgstr "配对地址"
+
+msgid "Management interface"
+msgstr "管理接口"
+
+msgid "Management protocol"
+msgstr "管理地址获取方式"
+
+msgid "Map the unified client Wi-Fi to radios actually present on this device. Radio names are not copied from the controller."
+msgstr "将统一终端 Wi-Fi 配置映射到本设备实际存在的射频，不直接复制控制器的 radio 名称。"
+
+msgid "Mesh ID"
+msgstr "Mesh 回程标识"
+
+msgid "Mesh Manager"
+msgstr "Mesh管理"
+
+msgid "History is unavailable"
+msgstr "变更记录暂不可用"
+
+msgid "Loading history…"
+msgstr "正在读取变更记录…"
+
+msgid "History changed or expired. Reload from the first page."
+msgstr "记录已更新或页面已过期，请重新从第一页查看。"
+
+msgid "History update failed. Displayed records may be outdated."
+msgstr "变更记录刷新失败，当前显示的内容可能已过时。"
+
+msgid "Reload history"
+msgstr "重新读取"
+
+msgid "Mesh enrollment"
+msgstr "Mesh 组网与加入"
+
+msgid "Mesh role"
+msgstr "Mesh 管理角色"
+
+msgid "Mobility domain"
+msgstr "漫游域"
+
+msgid "Model"
+msgstr "型号"
+
+msgid "Must match the management subnet. An incorrect address or mask can disconnect this device."
+msgstr "必须与管理子网匹配。错误的地址或掩码可能导致设备无法访问。"
+
+msgid "Netmask"
+msgstr "子网掩码"
+
+msgid "Network"
+msgstr "网络"
+
+msgid "Network name"
+msgstr "网络名称"
+
+msgid "Network version"
+msgstr "全网版本"
+
+msgid "New passphrase"
+msgstr "新 Wi-Fi 密码"
+
+msgid "No"
+msgstr "否"
+
+msgid "No associated clients reported"
+msgstr "尚未报告已关联的终端"
+
+msgid "No changed fields; intent ownership will still be recorded"
+msgstr "没有字段变化，但仍会记录配置意图及其所有权"
+
+msgid "No data"
+msgstr "暂无数据"
+
+msgid "Node"
+msgstr "节点"
+
+msgid "Node agent error"
+msgstr "节点代理异常"
+
+msgid "Node name"
+msgstr "节点名称"
+
+msgid "Nodes"
+msgstr "节点"
+
+msgid "None"
+msgstr "无"
+
+msgid "Not enrolled"
+msgstr "尚未加入"
+
+msgid "Not managed"
+msgstr "未托管"
+
+msgid "Not ready"
+msgstr "未就绪"
+
+msgid "Online"
+msgstr "在线"
+
+msgid "Only for static bridge/AP management. Leave empty to preserve existing local gateway and DNS settings."
+msgstr "仅用于桥接主节点或 AP 的静态管理网络。留空将保留原有本机网关和 DNS 设置。"
+
+msgid "Only unchanged managed fields will be restored. External edits must be resolved first."
+msgstr "仅恢复未被外部修改的受管字段。请先处理用户或其他服务造成的配置冲突。"
+
+msgid "Overview"
+msgstr "概览"
+
+msgid "Partially completed"
+msgstr "部分完成"
+
+msgid "Passed"
+msgstr "通过"
+
+msgid "Passphrase"
+msgstr "密码"
+
+msgid "Pending authorization"
+msgstr "等待授权"
+
+msgid "Physical port connected to the upstream LAN. Taking over a WAN port disables its local routing and bridges it into the AP LAN."
+msgstr "连接上级 LAN 的物理端口。接管 WAN 端口后，会禁用其本机路由功能并将其桥接到 AP 的 LAN。"
+
+msgid "Preflight all nodes"
+msgstr "预检全部节点"
+
+msgid "Preflighting"
+msgstr "正在预检"
+
+msgid "Preview changes"
+msgstr "预览变更"
+
+msgid "Preview restoration"
+msgstr "预览恢复操作"
+
+msgid "Property"
+msgstr "属性"
+
+msgid "Radio"
+msgstr "射频"
+
+msgid "Ready"
+msgstr "就绪"
+
+msgid "Recovery conflict"
+msgstr "恢复冲突"
+
+msgid "Recovery service"
+msgstr "恢复服务"
+
+msgid "Recovery service unavailable. Configuration changes are blocked."
+msgstr "恢复服务不可用，已阻止配置变更。"
+
+msgid "Reject"
+msgstr "拒绝"
+
+msgid "Rejected"
+msgstr "已拒绝"
+
+msgid "Rename"
+msgstr "重命名"
+
+msgid "Request"
+msgstr "申请"
+
+msgid "Request to join"
+msgstr "申请加入"
+
+msgid "Required for disruptive backhaul credential or channel changes. All APs must have a verified wired path before the coordinated change can proceed."
+msgstr "修改回程凭据或信道等高风险操作时必须启用。所有 AP 都需具备已验证的有线路径，才能执行协调变更。"
+
+msgid "Restore original managed settings"
+msgstr "恢复接管前的配置"
+
+msgid "Result"
+msgstr "结果"
+
+msgid "Revoke identity"
+msgstr "撤销身份授权"
+
+msgid "Revoke node identity"
+msgstr "撤销节点身份授权"
+
+msgid "Revoked"
+msgstr "已撤销"
+
+msgid "Roaming"
+msgstr "终端漫游"
+
+msgid "Role"
+msgstr "角色"
+
+msgid "Roll back"
+msgstr "回滚"
+
+msgid "Roll back cluster change"
+msgstr "回滚全网变更"
+
+msgid "Rollback conflict"
+msgstr "回滚冲突"
+
+msgid "Rollback queued"
+msgstr "等待回滚"
+
+msgid "Rolled back"
+msgstr "已回滚"
+
+msgid "Rolling back"
+msgstr "正在回滚"
+
+msgid "Root bridge"
+msgstr "主节点（桥接模式）"
+
+msgid "Root router"
+msgstr "主节点（路由模式）"
+
+msgid "Running"
+msgstr "运行中"
+
+msgid "SSID"
+msgstr "SSID"
+
+msgid "Save"
+msgstr "保存"
+
+msgid "Save local overrides"
+msgstr "保存本机覆盖配置"
+
+msgid "Separate backhaul secret, 16 to 63 characters. Leave empty to retain a previously managed secret. It is never advertised to unpaired devices."
+msgstr "独立于终端 Wi-Fi 的回程密码，长度为 16 至 63 位。留空可保留已有受管回程密码；不会向未配对设备广播。"
+
+msgid "Setting"
+msgstr "配置项"
+
+msgid "Shared client Wi-Fi name across this Mesh network. This is not the backhaul Mesh ID."
+msgstr "此 Mesh 网络所有终端接入点使用的统一 Wi-Fi 名称，与回程 Mesh 标识不同。"
+
+msgid "Signal"
+msgstr "信号"
+
+msgid "Staged"
+msgstr "候选已暂存"
+
+msgid "Static address"
+msgstr "静态地址"
+
+msgid "Status"
+msgstr "状态"
+
+msgid "Status update failed: %s"
+msgstr "状态更新失败：%s"
+
+msgid "The control service binds an existing local management address, never a wildcard or WAN address."
+msgstr "控制服务绑定本机已有的管理地址，不监听所有地址，也不绑定 WAN 地址。"
+
+msgid "Transaction"
+msgstr "事务"
+
+msgid "Unavailable"
+msgstr "不可用"
+
+msgid "Unified network intent"
+msgstr "统一网络配置意图"
+
+msgid "Unknown"
+msgstr "未知"
+
+msgid "Up"
+msgstr "已连接"
+
+msgid "Upstream DHCP"
+msgstr "从上级 DHCP 获取"
+
+msgid "Used only for 802.11s backhaul. Client roaming and node backhaul are separate features."
+msgstr "仅用于 802.11s 回程。终端漫游和节点回程是两个独立功能。"
+
+msgid "Value"
+msgstr "值"
+
+msgid "Version"
+msgstr "版本"
+
+msgid "Wired"
+msgstr "有线回程"
+
+msgid "Wired only"
+msgstr "仅有线回程"
+
+msgid "Wired preferred uses one active data path and an authenticated standby path. Arbitrary multipath and multi-hop require the batman-adv backend."
+msgstr "有线优先模式仅启用一条数据路径，另一路经过认证后作为备用。任意多路径或多跳需使用 batman-adv 后端。"
+
+msgid "Wired preferred, wireless standby"
+msgstr "有线优先，无线备用"
+
+msgid "Wireless"
+msgstr "无线"
+
+msgid "Wireless backhaul radio"
+msgstr "无线回程射频"
+
+msgid "Wireless client data is partially or completely unavailable."
+msgstr "无线终端数据部分或全部不可用。"
+
+msgid "Yes"
+msgstr "是"
+
+msgid "Roaming options"
+msgstr "漫游选项"
+
+msgid "Radio and maintenance"
+msgstr "射频与维护"
+
+msgid "Client wireless"
+msgstr "终端无线网络"
+
+msgid "Backhaul configuration"
+msgstr "回程配置"
+
+msgid "Mesh network"
+msgstr "Mesh 网络"
+
+msgid "Identity details"
+msgstr "身份详情"
+
+msgid "Network identity"
+msgstr "网络身份"
+
+msgid "Offline"
+msgstr "离线"
+
+msgid "Identity and backhaul"
+msgstr "身份与回程"
+
+msgid "AP nodes"
+msgstr "AP 节点"
+
+msgid "No AP nodes joined"
+msgstr "尚无 AP 节点加入"
+
+msgid "Pending join requests"
+msgstr "待批准的加入请求"
+
+msgid "Cluster changes"
+msgstr "全网变更"
+
+msgid "Edit local settings"
+msgstr "编辑本机设置"
+
+msgid "Network status"
+msgstr "网络状态"
+
+msgid "Management"
+msgstr "托管"
+
+msgid "This device"
+msgstr "本机设备"
+
+msgid "Local links"
+msgstr "本机链路"
+
+msgid "Associated clients"
+msgstr "已连接终端"
+
+msgid "Local changes"
+msgstr "本机变更"
+
+msgid "Dependency checks"
+msgstr "依赖检查"
+
+msgid "No active path"
+msgstr "无活动路径"
+
+msgid "Network topology"
+msgstr "网络拓扑"
+
+msgid "Version %s"
+msgstr "版本 %s"
+
+msgid "No cluster changes yet"
+msgstr "暂无全网变更"
+
+msgid "Current backhaul"
+msgstr "当前回程"
+
+msgid "Active path"
+msgstr "活动路径"
+
+msgid "Wired path"
+msgstr "有线路径"
+
+msgid "Verified"
+msgstr "已验证"
+
+msgid "Not verified"
+msgstr "未验证"
+
+msgid "Not enabled"
+msgstr "未启用"
+
+msgid "Wireless path"
+msgstr "无线备用路径"
+
+msgid "AP backhaul"
+msgstr "AP 回程"
+
+msgid "No local changes yet"
+msgstr "暂无本机变更"
+
+msgid "Manager is busy; retry later."
+msgstr "管理服务正忙，请稍后重试。"
+
+msgid "Controller did not confirm the change; nodes rolled back."
+msgstr "管理节点未确认本次变更，各节点已回滚。"
+
+msgid "Controller restarted or timed out; check each node rollback."
+msgstr "管理节点重启或超时，请检查各节点的独立回滚结果。"
+
+msgid "Unconfirmed change was rolled back after timeout or reboot."
+msgstr "未确认的变更因超时或设备重启而回滚。"
+
+msgid "Change failed; inspect technical details."
+msgstr "变更失败，展开查看技术详情。"
+
+msgid "Not authorized"
+msgstr "未授权"
+
+msgid "Client observations"
+msgstr "终端连接记录"
+
+msgid "Observed AP change"
+msgstr "观测到 AP 变化"
+
+msgid "Associated"
+msgstr "已关联"
+
+msgid "Disconnected"
+msgstr "已断开"
+
+msgid "Observed movement between AP reports; handover is not independently verified."
+msgstr "仅根据 AP 上报观测到节点变化，尚未独立验证切换是否无缝。"
+
+msgid "No client observations yet"
+msgstr "暂无终端连接记录"
+
+msgid "Mesh signal"
+msgstr "Mesh 信号"
+
+msgid "Reported PHY rate"
+msgstr "报告的 PHY 协商速率"
+
+msgid "Mesh channel"
+msgstr "Mesh 信道"
+
+msgid "DFS and channels"
+msgstr "DFS 与信道"
+
+msgid "CAC in progress (%s s)"
+msgstr "CAC 检测中（剩余 %s 秒）"
+
+msgid "No CAC in progress"
+msgstr "当前未进行 CAC"
+
+msgid "DFS status unavailable"
+msgstr "DFS 状态不可用"
+
+msgid "Time"
+msgstr "时间"
+
+msgid "Discover Mesh controllers"
+msgstr "发现 Mesh 管理节点"
+
+msgid "Wired timeout"
+msgstr "有线超时"
+
+msgid "Wireless timeout"
+msgstr "无线超时"
+
+msgid "Retry discovery"
+msgstr "重新搜索"
+
+msgid "Searching on wired LAN"
+msgstr "正在有线局域网中搜索"
+
+msgid "Wired controller found"
+msgstr "已发现有线管理节点"
+
+msgid "Scanning nearby Wi-Fi"
+msgstr "正在扫描附近的 Wi-Fi"
+
+msgid "Wireless scan finished"
+msgstr "无线扫描已结束"
+
+msgid "Wireless scan unavailable"
+msgstr "无线扫描不可用"
+
+msgid "No Wi-Fi access points found"
+msgstr "未发现可用的 Wi-Fi 接入点"
+
+msgid "Mesh intent version"
+msgstr "全网意图版本"
+
+msgid "Local transaction version"
+msgstr "本机事务版本"
+
+msgid "Unverified Wi-Fi"
+msgstr "未验证的 Wi-Fi"
+
+msgid "Connect and request to join"
+msgstr "连接并申请加入"
+
+msgid "Connect for Mesh enrollment"
+msgstr "连接 Wi-Fi 以加入 Mesh"
+
+msgid "Wi-Fi access point"
+msgstr "Wi-Fi 接入点"
+
+msgid "BSSID"
+msgstr "BSSID"
+
+msgid "Wi-Fi password"
+msgstr "Wi-Fi 密码"
+
+msgid "Temporary Wi-Fi did not obtain an address"
+msgstr "临时 Wi-Fi 未取得地址"
+
+msgid "Temporary Wi-Fi connected"
+msgstr "临时 Wi-Fi 已连接"
+
+msgid "Temporary Wi-Fi connecting"
+msgstr "临时 Wi-Fi 正在连接"
+
+msgid "Disconnect temporary Wi-Fi"
+msgstr "断开临时 Wi-Fi"
+
+msgid "Cancel joining request"
+msgstr "取消加入申请"
+
+msgid "Joining code does not match the selected controller"
+msgstr "入网码与所选管理节点不匹配"
+
+msgid "Verify on controller"
+msgstr "请在管理节点核对"
+
+msgid "Verified during connection"
+msgstr "连接时验证"
+
+msgid "Copy the code from the controller. It pins the controller CA and contains a short-lived credential, not its login password. Approval is still required."
+msgstr "从管理节点复制入网码。入网码绑定控制器 CA，包含短时凭据而非登录密码；仍需管理节点批准。"
+
+msgid "Valid for %s seconds; the controller must still approve the device."
+msgstr "有效期 %s 秒；仍需管理节点批准设备加入。"
+
+msgid "Queued"
+msgstr "已排队"
+
+msgid "Preparing repair preview"
+msgstr "正在准备修复预览"
+
+msgid "Local repair reserved"
+msgstr "本机修复已登记"
+
+msgid "Configuration repair"
+msgstr "配置漂移修复"
+
+msgid "No repair request"
+msgstr "无修复请求"
+
+msgid "Only managed fields are restored; other settings are preserved"
+msgstr "仅恢复已托管字段，保留其他配置"
+
+msgid "Managed value changed outside Mesh Manager"
+msgstr "托管配置已被 Mesh管理以外的操作修改"
+
+msgid "No configuration drift reported"
+msgstr "未上报配置偏差"
+
+msgid "External change preserved; manual recovery required"
+msgstr "已保留外部改动，请人工处理冲突"
+
+msgid "No changed fields"
+msgstr "无待修改字段"
+
+msgid "Cancel repair"
+msgstr "取消或回滚修复"
+
+msgid "Resend managed configuration"
+msgstr "重新下发托管配置"
+
+msgid "Request repair preview"
+msgstr "请求修复预览"
+
+msgid "Managed differences: %s"
+msgstr "托管偏差：%s 项"
+
+msgid "Consistent"
+msgstr "配置一致"
+
+msgid "Last report"
+msgstr "上次上报"
+
+msgid "Configuration"
+msgstr "配置"
+
+msgid "Node repairs"
+msgstr "节点修复记录"
+
+msgid "Waiting for controller health confirmation"
+msgstr "等待 Root 验证健康并确认"
+
+msgid "Restore Root configuration"
+msgstr "恢复 Root 配置"
+
+msgid "Advanced settings"
+msgstr "高级配置"
+
+msgid "Leave empty to keep current password"
+msgstr "留空保留当前密码"
+
+msgid "Keep existing or generate automatically"
+msgstr "保留现有密钥，首次启用时自动生成"
+
+msgid "Leave empty to keep the existing same-mode backhaul secret. A new wireless backhaul or a mode change generates an independent random secret automatically."
+msgstr "回程模式不变时，留空保留现有密钥。首次启用无线回程或改变模式时，会自动生成独立随机密钥，无需自行设置。"
+
+msgid "Save & Apply"
+msgstr "保存并应用"
+
+msgid "Reset"
+msgstr "重置"
+
+msgid "Network configuration changed; reset before editing again."
+msgstr "全网配置已更新，请重置后再编辑。"
+
+msgid "Backhaul changes require every AP to have a verified wired connection. Applying may briefly interrupt the network."
+msgstr "修改回程需要所有 AP 通过已验证的有线路径连接。应用时网络可能短暂中断，请确认接线后再批准。"
+
+msgid "Device identities"
+msgstr "设备身份详情"
+
+msgid "Pagination"
+msgstr "分页"
+
+msgid "Previous page"
+msgstr "上一页"
+
+msgid "Next page"
+msgstr "下一页"
+
+msgid "Records %s-%s of %s"
+msgstr "第 %s-%s 条，共 %s 条"
+
+msgid "Page %s of %s"
+msgstr "第 %s / %s 页"
+
+msgid "Review & Apply"
+msgstr "审阅并应用"
+
+msgid "Restore configuration"
+msgstr "恢复配置"
+
+msgid "Local overrides are saved for the next configuration transaction; this does not apply network changes immediately."
+msgstr "本机设置保存后，将在下一次配置事务中使用，不会立即更改网络。需要由 Root 再次下发配置。"
+
+msgid "Local settings"
+msgstr "本机设置"
+
+msgid "Wireless interface state"
+msgstr "无线接口启停状态"
+
+msgid "Managed setting"
+msgstr "托管配置项"
+
+msgid "Restore managed configuration"
+msgstr "恢复托管配置"
+
+msgid "Technical details"
+msgstr "技术详情"
+
+msgid "Show differences"
+msgstr "查看偏差"
+
+msgid "Restore only the managed fields to the saved controller configuration. Review the preview first. Unconfirmed repairs restore the pre-repair values; later external changes are preserved and reported as conflicts."
+msgstr "仅将已托管字段恢复为 Root 保存的配置，不会覆盖无关设置。先查看差异再确认；未通过健康验证或未及时确认时恢复到修复前的值。修复期间再次发生的外部改动会保留，并明确报告回滚冲突。"
+
+msgid "Resolve managed differences on Nodes before applying changes."
+msgstr "请先在“节点”页处理托管配置偏差，再应用新配置。"
+
+msgid "Review configuration differences"
+msgstr "查看配置偏差"
+
+msgid "Repair preview changed; close this dialog and review again."
+msgstr "修复预览已变化或过期，请关闭窗口并重新预览。"
+
+msgid "Rollback restores the values present before this repair"
+msgstr "回滚将恢复到本次修复前的值"
+
+msgid "Repair requires manual review"
+msgstr "此项修复需要人工检查"
+
+msgid "I approve restoring the displayed managed fields"
+msgstr "我确认恢复所显示的托管字段"
+
+msgid "Restore the current authenticated Root intent for managed fields only. Review the differences before applying. Unconfirmed repairs roll back to the values before repair."
+msgstr "经身份验证后获取 Root 当前配置，只恢复已托管字段。应用前须检查差异；未确认的修复将自动回滚到修复前的值。"
+
+msgid "Configuration help"
+msgstr "配置说明"
+
+msgid "Retrying in 30 seconds"
+msgstr "30 秒后重试"
+
+msgid "Waiting for enrollment credentials or a wired enrollment window"
+msgstr "等待邀请码或 Root 开放有线自动接纳"
+
+msgid "Multiple controllers found; select a network"
+msgstr "发现多个主节点，请选择网络"
+
+msgid "Applying controller configuration"
+msgstr "正在应用 Root 配置"
+
+msgid "Joined"
+msgstr "已加入"
+
+msgid "Stopped"
+msgstr "已停止"
+
+msgid "Not started"
+msgstr "未开始"
+
+msgid "Create and enable Mesh"
+msgstr "创建并启用 Mesh"
+
+msgid "Enable automatic joining"
+msgstr "启用自动加入"
+
+msgid "Enable automatic AP joining"
+msgstr "启用 AP 自动加入"
+
+msgid "Stop automatic joining"
+msgstr "停止自动加入"
+
+msgid "Manual joining and advanced settings"
+msgstr "手动加入与高级配置"
+
+msgid "Bootstrap Wi-Fi name"
+msgstr "引导 Wi-Fi 名称"
+
+msgid "Bootstrap Wi-Fi password"
+msgstr "引导 Wi-Fi 密码"
+
+msgid "Setup incomplete"
+msgstr "设置待完成"
+
+msgid "Preparing"
+msgstr "准备中"
+
+msgid "Waiting for AP"
+msgstr "等待 AP 响应"
+
+msgid "Restoring this device"
+msgstr "正在恢复本机配置"
+
+msgid "Disabled"
+msgstr "已关闭"
+
+msgid "Cancelled"
+msgstr "已取消"
+
+msgid "Restoring DHCP on the connected uplink is unsafe. Disconnect that cable or move it to the original WAN port, then preview again."
+msgstr "当前上联仍连接上游，恢复 DHCP 会造成冲突。请先拔下该网线或移至原 WAN 口，再重新预览。"
+
+msgid "External changes must be reviewed before restoring the original settings."
+msgstr "托管字段存在外部修改，请先处理配置偏差，再恢复原配置。"
+
+msgid "Apply"
+msgstr "应用"
+
+msgid "Disable Mesh and restore original settings"
+msgstr "关闭 Mesh 并恢复原配置"
+
+msgid "Enable Mesh"
+msgstr "启用 Mesh"
+
+msgid "Mesh enabled"
+msgstr "启用 Mesh"
+
+msgid "Enabled"
+msgstr "已开启"
+
+msgid "Disabling restores only settings managed by Mesh Manager and retains the saved Mesh configuration. Root first restores every managed AP; offline nodes and conflicts prevent shutdown."
+msgstr "关闭时仅恢复 Mesh管理接管的配置，保留 Mesh 设置供重新开启。Root 须先恢复所有受管 AP；节点离线或恢复冲突时不能关闭 Root。"
+
+msgid "Review restore preview"
+msgstr "查看恢复预览"
+
+msgid "Mesh shutdown"
+msgstr "关闭 Mesh"
+
+msgid "Mesh shutdown records"
+msgstr "Mesh 关闭记录"
+
+msgid "Mesh operation records"
+msgstr "Mesh 启停记录"
+
+msgid "Node Mesh operation"
+msgstr "节点 Mesh 操作"
+
+msgid "AP Mesh operation failed; Root remains enabled."
+msgstr "AP 的 Mesh 操作失败，Root 保持启用。"
+
+msgid "The original network or uplink state cannot be verified. Check the wiring and network configuration, then preview again."
+msgstr "无法核实原网络或上联状态，请检查接线与网络配置后重新预览。"
+
+msgid "Mesh"
+msgstr "Mesh"
+
+msgid "Disable Mesh"
+msgstr "关闭 Mesh"
+
+msgid "Disable every AP first. Root can stop only after all APs confirm that Mesh is disabled."
+msgstr "请先逐台关闭 AP。所有 AP 确认已关闭 Mesh 后，才能关闭 Root。"
+
+msgid "Close wired auto-enrollment"
+msgstr "关闭有线自动接纳"
+
+msgid "Open wired auto-enrollment"
+msgstr "开放有线自动接纳"
+
+msgid "For five minutes, devices connected to this wired LAN can join automatically. Devices behind the same switch are included. Wireless nodes still require approval."
+msgstr "开放 5 分钟，接入此有线局域网的设备可自动加入，包括同一交换机下的设备。无线节点仍需审批。"
+
+msgid "Remaining: %s s"
+msgstr "剩余 %s 秒"
+
+msgid "Built on native OpenWrt components to manage Mesh nodes and Wi-Fi, with 802.11k/v/r client roaming."
+msgstr "基于 OpenWrt 原生组件，统一管理 Mesh 组网与 Wi-Fi，支持 802.11k/v/r 终端漫游。"
+
+msgid "Mesh state"
+msgstr "Mesh 状态"
+
+msgid "Mesh is enabled."
+msgstr "Mesh 已开启。"
+
+msgid "Mesh is disabled."
+msgstr "Mesh 已关闭。"
+
+msgid "Mesh is disabled. Original managed settings have been restored."
+msgstr "Mesh 已关闭，原托管配置已恢复。"
+
+msgid "Mesh operation queued. Waiting for configuration and health checks."
+msgstr "操作已提交，正在等待配置应用和健康验证。"
+
+msgid "Mesh operation did not complete. Check the rollback result."
+msgstr "Mesh 操作未完成，请检查回滚结果。"
+
+msgid "Rolling back Mesh change"
+msgstr "正在回滚 Mesh 变更"
+
+msgid "Enable pending confirmation"
+msgstr "开启待确认"
+
+msgid "Disable pending confirmation"
+msgstr "关闭待确认"
+
+msgid "Enabling Mesh"
+msgstr "正在开启 Mesh"
+
+msgid "Disabling Mesh"
+msgstr "正在关闭 Mesh"
+
+msgid "Preparing to disable Mesh"
+msgstr "正在准备关闭 Mesh"
+
+msgid "Configuration restored. Confirm to finish disabling Mesh."
+msgstr "原配置已恢复，请确认以完成关闭 Mesh。"
+
+msgid "Restore preview is ready. Review and approve it before applying."
+msgstr "恢复预览已就绪，请检查并确认后应用。"
+
+msgid "Node results"
+msgstr "节点结果"
+
+msgid "Latest Mesh operation"
+msgstr "最近一次 Mesh 操作"
+
+msgid "Latest local change"
+msgstr "最近一次本机变更"
+
+msgid "Conflicts"
+msgstr "冲突项"
+
+msgid "The selected AP uplink is also used by another network (%s). Adjust that network before enabling Mesh."
+msgstr "所选 AP 上联端口还被其他网络（%s）使用，请先调整该网络，再开启 Mesh。"
+
+msgid "The device ownership of another network (%s) cannot be verified. Inspect its configuration before enabling Mesh."
+msgstr "无法确认其他网络（%s）的设备占用情况，请先检查该网络配置，再开启 Mesh。"
+
+msgid "The selected AP uplink is also used by another network. Adjust that network before enabling Mesh."
+msgstr "所选 AP 上联端口还被其他网络使用，请先调整该网络，再开启 Mesh。"
+
+msgid "The AP uplink topology cannot be verified. Inspect other network configurations before enabling Mesh."
+msgstr "无法确认 AP 上联端口的拓扑，请先检查其他网络配置，再开启 Mesh。"
+
+msgid "Preview timed out. Check the controller connection and try again."
+msgstr "预览超时，请检查与主节点的连接后重试。"
+
+msgid "Preview queued"
+msgstr "预览已排队"
+
+msgid "Preparing configuration preview"
+msgstr "正在生成配置预览"
+
+msgid "Preview expired after a service restart or inactivity. Please preview again."
+msgstr "预览因服务重启或长时间未操作而失效，请重新预览。"
+
+msgid "usteer is not installed"
+msgstr "未安装 usteer"
+
+msgid "Running outside Mesh management"
+msgstr "运行中（未托管）"
+
+msgid "Steering configuration is not effective"
+msgstr "漫游引导配置未生效"
+
+msgid "Roaming assistance"
+msgstr "漫游引导"
+
+msgid "Waiting for the current operation…"
+msgstr "正在等待当前操作完成…"
+
+msgid "Cancelled. Some nodes had already committed; apply a new change to make the network consistent."
+msgstr "已取消。部分节点已提交，请通过新的配置变更恢复全网一致。"
+
+msgid "Recovery finished with conflicts or failures; check each node before making another change."
+msgstr "恢复存在冲突或失败，请先检查各节点的结果，再进行新的变更。"
+
+msgid "Backend details"
+msgstr "服务详情"
+
+msgid "Backend"
+msgstr "服务"
+
+msgid "Communication interfaces"
+msgstr "通信接口"
+
+msgid "Policy support"
+msgstr "策略支持"
+
+msgid "Supported"
+msgstr "支持"
+
+msgid "Unsupported"
+msgstr "不支持"
+
+msgid "Install official usteer and stop other steering services before enabling assistance."
+msgstr "请安装官方 usteer，并停止其他漫游引导服务后再启用。"
+
+msgid "This usteer version does not support the required advisory policy."
+msgstr "当前 usteer 版本不支持所需的建议式漫游策略。"
+
+msgid "Enable usteer in System → Startup before enabling roaming assistance."
+msgstr "请先在“系统 → 启动项”中启用 usteer 开机启动。"
+
+msgid "Enable Wi-Fi and 802.11k/v before enabling roaming assistance."
+msgstr "请先启用无线网络及 802.11k/v，再开启漫游引导。"
+
+msgid "Keep exactly one usteer configuration section before enabling assistance."
+msgstr "请保留一个 usteer 配置节，再开启漫游引导。"
+
+msgid "Set the transition threshold at least 5 dB below the scan threshold."
+msgstr "建议切换阈值应至少比扫描阈值低 5 dB。"
+
+msgid "Scan threshold (dBm)"
+msgstr "扫描阈值（dBm）"
+
+msgid "Transition threshold (dBm)"
+msgstr "建议切换阈值（dBm）"
+
+msgid "Candidate advantage (dB)"
+msgstr "候选信号优势（dB）"
+
+msgid "Suggestion interval (seconds)"
+msgstr "建议间隔（秒）"
+
+msgid "Custom roaming thresholds"
+msgstr "自定义漫游阈值"
+
+msgid "Request neighbor scans below this signal level. Range: -90 to -40 dBm; recommended: -70 dBm."
+msgstr "信号低于此值时请求扫描邻居。范围为 -90 至 -40 dBm，推荐 -70 dBm。"
+
+msgid "Suggest a transition below this signal level. Keep it at least 5 dB below the scan threshold; recommended: -75 dBm."
+msgstr "信号低于此值时建议终端切换。应至少比扫描阈值低 5 dB，推荐 -75 dBm。"
+
+msgid "A candidate must have a stronger signal by this margin. Range: 3 to 30 dB; recommended: 8 dB."
+msgstr "候选接入点信号至少强于当前接入点的幅度。范围为 3 至 30 dB，推荐 8 dB。"
+
+msgid "Minimum interval between transition suggestions. Range: 30 to 600 seconds; recommended: 60 seconds. Clients decide whether to roam."
+msgstr "两次切换建议之间的最短间隔。范围为 30 至 600 秒，推荐 60 秒。是否漫游由终端决定。"
+
+msgid "Leave disabled to use the recommended policy. Changes apply to all nodes through a reviewed transaction. Association rejection and forced disconnection remain disabled."
+msgstr "默认使用推荐策略，无需调整。修改经过预览确认后同步到所有节点；不拒绝终端接入，也不强制断开终端。"
+
+msgid "Healthy"
+msgstr "正常"
+
+msgid "Idle"
+msgstr "空闲"
+
+msgid "Node agent"
+msgstr "节点代理"
+
+msgid "Component"
+msgstr "组件"
+
+msgid "Error"
+msgstr "错误"
+
+msgid "No runtime records"
+msgstr "暂无运行记录"
+
+msgid "Clear runtime records"
+msgstr "清理运行记录"
+
+msgid "Cleared %s runtime records."
+msgstr "已清理 %s 条运行记录。"
+
+msgid "Runtime logs changed. Close this dialog and refresh before clearing."
+msgstr "运行记录已变化，请关闭此窗口，刷新后重新确认清理。"
+
+msgid "Clear %s temporary runtime records? Transaction history, recovery snapshots and system logs are preserved."
+msgstr "确认清理这 %s 条临时运行记录？事务历史、恢复快照和系统日志均保留。"
+
+msgid "Refresh records"
+msgstr "刷新记录"
+
+msgid "View runtime records"
+msgstr "查看运行记录"
+
+msgid "Runtime records"
+msgstr "运行记录"
+
+msgid "Up to 128 state changes are kept in memory and disappear after a reboot. These diagnostic records do not replace transaction history."
+msgstr "最多保留 128 条状态变化，仅存于内存，重启后清空。这些诊断记录不替代事务历史。"
+
+msgid "Operation failed"
+msgstr "操作失败"
+
+msgid "Preview name change"
+msgstr "预览名称修改"
+
+msgid "Node name saved."
+msgstr "节点名称已保存。"
+
+msgid "I confirm the displayed name change"
+msgstr "我确认以上名称修改"
+
+msgid "Node name changes"
+msgstr "节点名称变更"
+
+msgid "No node name changes"
+msgstr "暂无节点名称变更"
+
+msgid "The node changed. Close this dialog and review its name again."
+msgstr "节点信息已变化，请关闭此窗口并重新预览名称。"
+
+msgid "The node performed local recovery. Check its transaction history."
+msgstr "节点已执行本机恢复，请查看该节点的事务记录。"
+
+msgid "Filter by node"
+msgstr "按节点筛选"
+
+msgid "All managed nodes"
+msgstr "全部受管节点"
+
+msgid "Loading client observations…"
+msgstr "正在读取终端观测…"
+
+msgid "Client observations unavailable"
+msgstr "终端观测数据不可用"
+
+msgid "Client list changed or expired. Reload from the first page."
+msgstr "终端列表已变化或过期，请从第一页重新加载。"
+
+msgid "Client update failed. Displayed observations may be outdated."
+msgstr "终端数据更新失败，当前显示的观测可能已过期。"
+
+msgid "Reload observations"
+msgstr "重新加载观测"
+
+msgid "No current observation from: %s"
+msgstr "以下节点暂无有效观测：%s"
+
+msgid "Latest complete samples, at most %s seconds old."
+msgstr "最近完整观测，采样时间距今最多 %s 秒。"
+
+msgid "Mesh is not enabled on an observation source."
+msgstr "暂无已开启 Mesh 的观测节点。"
+
+msgid "Preview and apply"
+msgstr "预览并应用"
+
+msgid "Apply these settings to this device now. Confirm after health checks pass; otherwise the previous values are restored automatically."
+msgstr "立即将这些设置应用于本机。健康检查通过后请确认，否则将自动恢复修改前的值。"
+
+msgid "Configuration changes"
+msgstr "配置变更"
+
+msgid "Allow legacy Mesh takeover"
+msgstr "允许接管旧 Mesh 配置"
+
+msgid "Could not confirm the result. Check the latest local change before retrying."
+msgstr "暂时无法确认操作结果，请先查看最近一次本机变更，再决定继续应用或回滚。"
+
+msgid "LAN DHCP configuration"
+msgstr "局域网 DHCP 服务配置"
+
+msgid "LAN DHCP service"
+msgstr "局域网 DHCP 服务运行状态"
+
+msgid "LAN IPv6 service"
+msgstr "局域网 IPv6 服务运行状态"
+
+msgid "Controller response verification failed. Check device time and update Root and AP together."
+msgstr "主节点响应校验失败。请检查设备时间，并同时更新主节点和 AP 的软件版本。"
+
+msgid "The signed configuration exceeds the transmission limit. Reduce the configuration and preview again."
+msgstr "签名配置超过传输大小限制。请缩减配置后重新预览。"
+
+msgid "LAN services"
+msgstr "LAN 服务"
+
+msgid "Check"
+msgstr "检查项"
+
+msgid "Not running"
+msgstr "未运行"
+
+msgid "Not required"
+msgstr "无需运行"
+
+msgid "Configuration needs attention"
+msgstr "配置需要检查"
+
+msgid "Updated at %s"
+msgstr "更新于 %s"
+
+msgid "Checks local configuration and service processes. An AP with DHCP and IPv6 announcements disabled does not need these servers. This does not test client connectivity."
+msgstr "检查本机配置和服务进程。AP 关闭 DHCP 和 IPv6 通告时无需运行相应服务；此检查不代表终端已能正常联网。"
+
+msgid "Certificates"
+msgstr "证书"
+
+msgid "Certificate"
+msgstr "证书类型"
+
+msgid "Valid"
+msgstr "有效"
+
+msgid "Expires"
+msgstr "到期日期"
+
+msgid "Expires within 30 days"
+msgstr "30 天内到期"
+
+msgid "Not yet valid"
+msgstr "尚未生效"
+
+msgid "Invalid certificate"
+msgstr "证书无效"
+
+msgid "Certificate identity mismatch"
+msgstr "证书与设备身份不符"
+
+msgid "Certificate chain not trusted"
+msgstr "证书链不可信"
+
+msgid "Check device time"
+msgstr "请检查设备时间"
+
+msgid "Certificate missing"
+msgstr "证书缺失"
+
+msgid "Device certificate"
+msgstr "本机设备证书"
+
+msgid "Network CA"
+msgstr "网络 CA 证书"
+
+msgid "Checks local certificates against the saved identity and device time. This does not check private keys, controller connectivity or remote revocation. Certificate renewal is not yet available."
+msgstr "根据已保存的身份和本机时间检查证书。不检查私钥、主节点连通性或远程撤销状态；证书续签尚未实现。"
+
+msgid "Firmware versions"
+msgstr "固件版本"
+
+msgid "Compare node firmware"
+msgstr "查看节点固件"
+
+msgid "Firmware"
+msgstr "固件"
+
+msgid "Target platform"
+msgstr "目标平台"
+
+msgid "Kernel"
+msgstr "内核"
+
+msgid "Local observation"
+msgstr "本机读取"
+
+msgid "Last reported (offline)"
+msgstr "最后上报（已离线）"
+
+msgid "Version unavailable"
+msgstr "版本信息不可用"
+
+msgid "Different firmware"
+msgstr "固件版本不同"
+
+msgid "Same firmware version"
+msgstr "固件版本相同"
+
+msgid "Different firmware may support different features. Matching versions do not prove compatibility; configuration preflight still checks actual device capabilities. Offline values are the last report."
+msgstr "不同固件支持的功能可能不同。版本相同不代表功能兼容，应用前仍会检查设备实际能力；离线节点显示最后一次上报的信息。"
+
+msgid "Wait five seconds before starting another check."
+msgstr "请等待 5 秒后再发起检查。"
+
+msgid "The selected node is not currently available. Refresh its status before checking again."
+msgstr "所选节点当前不可用，请刷新节点状态后重试。"
+
+msgid "The node address or identity changed during the check. Start a new check."
+msgstr "检查期间节点地址或身份发生变化，请重新检查。"
+
+msgid "Check cancelled."
+msgstr "检查已取消。"
+
+msgid "Diagnostic permission is no longer available."
+msgstr "当前会话已无诊断权限。"
+
+msgid "The check timed out."
+msgstr "检查超时。"
+
+msgid "The device ping command is unavailable or returned an unsupported result."
+msgstr "设备的 ping 命令不可用，或返回了无法识别的结果。"
+
+msgid "Checking node connectivity…"
+msgstr "正在检查节点连通性…"
+
+msgid "Replies received"
+msgstr "收到回复"
+
+msgid "Some replies missing"
+msgstr "部分请求未收到回复"
+
+msgid "No ICMP reply"
+msgstr "未收到 ICMP 回复"
+
+msgid "Duplicate replies observed"
+msgstr "收到重复回复"
+
+msgid "Packets received / sent"
+msgstr "收到 / 发出包数"
+
+msgid "Packet loss"
+msgstr "丢包率"
+
+msgid "Average round-trip time"
+msgstr "平均往返延迟"
+
+msgid "Updated at"
+msgstr "采样时间"
+
+msgid "Diagnostic node"
+msgstr "检查节点"
+
+msgid "Check connectivity"
+msgstr "检查连通性"
+
+msgid "Cancel check"
+msgstr "取消检查"
+
+msgid "Node connectivity"
+msgstr "节点连通性"
+
+msgid "Run a node check"
+msgstr "检查节点连接"
+
+msgid "Sends three ICMP packets to the selected managed node, for at most five seconds. ICMP can be blocked by a firewall; this does not verify device identity, service health or roaming."
+msgstr "向所选受管节点发送 3 个 ICMP 包，最长等待 5 秒。防火墙可能阻止 ICMP；此检查不能验证设备身份、服务健康或漫游效果。"
+
+msgid "No online managed nodes"
+msgstr "没有在线受管节点"
+
+msgid "The device diagnostic command is unavailable or returned an unsupported result."
+msgstr "设备诊断命令不可用，或返回了尚不支持的结果。"
+
+msgid "Target address replied"
+msgstr "目标地址已回应"
+
+msgid "Hop limit reached"
+msgstr "已达到跳数上限"
+
+msgid "Trace ended before reaching the target"
+msgstr "检查已结束，尚未观察到目标回应"
+
+msgid "Unreachable response"
+msgstr "收到不可达回应"
+
+msgid "Network unreachable"
+msgstr "网络不可达"
+
+msgid "Host unreachable"
+msgstr "主机不可达"
+
+msgid "Protocol unreachable"
+msgstr "协议不可达"
+
+msgid "Blocked by network policy"
+msgstr "被网络策略阻止"
+
+msgid "Packet needs fragmentation"
+msgstr "数据包需要分片"
+
+msgid "Hop"
+msgstr "跳数"
+
+msgid "Address"
+msgstr "地址"
+
+msgid "Round-trip time"
+msgstr "往返延迟"
+
+msgid "No reply"
+msgstr "未收到回复"
+
+msgid "Reply received"
+msgstr "收到回复"
+
+msgid "No hop observations"
+msgstr "暂无路径结果"
+
+msgid "Trace node path"
+msgstr "查看节点路径"
+
+msgid "Path tracing sends one UDP probe per hop, up to five hops with a one-second wait each. Missing replies can result from filtering and do not prove a node is offline."
+msgstr "路径检查每跳发送 1 个 UDP 探测包，最多 5 跳，每跳等待 1 秒。防火墙过滤可能导致没有回复，并不代表节点离线。"
+
+msgid "Reading installed package versions…"
+msgstr "正在读取已安装的软件包版本…"
+
+msgid "Installed package"
+msgstr "已安装软件包"
+
+msgid "Not installed"
+msgstr "未安装"
+
+msgid "Package versions unavailable"
+msgstr "软件包版本不可用"
+
+msgid "Installed package versions could not be read. No repository or package was changed."
+msgstr "无法读取已安装的软件包版本，软件源和软件包未被修改。"
+
+msgid "Refresh package versions"
+msgstr "刷新软件包版本"
+
+msgid "View installed dependencies"
+msgstr "查看已安装依赖"
+
+msgid "Reads local installed package versions only when opened or refreshed. Packages are not downloaded or changed. Version labels do not prove driver support or service health."
+msgstr "仅在展开或手动刷新时读取本机已安装的软件包版本，不下载或修改软件包。版本信息不能代替驱动能力和服务健康检查。"
+
+msgid "Package versions"
+msgstr "软件包版本"
+
+msgid "Recovery service is unavailable; configuration changes are blocked."
+msgstr "恢复服务不可用，已阻止配置变更。"
+
+msgid "Local service status cannot be read."
+msgstr "无法读取本机服务状态。"
+
+msgid "No recent authenticated node report."
+msgstr "近期未收到该节点的认证上报，请检查电源和连接。"
+
+msgid "The node agent has not reported a fresh status."
+msgstr "节点代理未及时更新状态，请查看运行记录。"
+
+msgid "The node agent check failed. Inspect the current runtime records."
+msgstr "节点代理检查失败，请查看当前运行记录。"
+
+msgid "No active backhaul path was reported."
+msgstr "节点报告当前没有活动回程路径。"
+
+msgid "Wireless backup is active. Check the preferred wired connection."
+msgstr "正在使用无线备用回程，请检查有线连接。"
+
+msgid "View node"
+msgstr "查看节点"
+
+msgid "View backhaul"
+msgstr "查看回程"
+
+msgid "View diagnostics"
+msgstr "查看诊断"
+
+msgid "Needs attention"
+msgstr "需要关注"
+
+msgid "Managed configuration differs in %s fields. Preview a repair on the Nodes page."
+msgstr "托管配置有 %s 项偏差，可在节点页预览修复。"
+
+msgid "No current alerts"
+msgstr "暂无当前告警"
+
+msgid "Current observations only. Alerts disappear after recovery; past failures remain in Changes."
+msgstr "这里只显示当前观测到的问题，恢复后自动消除；历史失败请查看“变更”。"
+
+msgid "Only the first 128 alerts are shown. Check the Nodes page for the remaining devices."
+msgstr "仅显示前 128 项告警，其余设备请在节点页查看。"
+
+msgid "Issue"
+msgstr "问题"
+
+msgid "Action"
+msgstr "操作"
+
+msgid "The isolated controller connection is unavailable. Restore the connection and retry confirmation, or roll back. Unconfirmed changes roll back automatically at the deadline."
+msgstr "独立控制通道暂不可用。请恢复连接后重试确认，或选择回滚；未确认的变更将在到期后自动回滚。"
+
+msgid "The controller connection failed. Check the network link, device time and controller status, then try again."
+msgstr "无法连接控制器，请检查网络链路、设备时间和控制器状态后重试。"
+
+msgid "Device time could not be synchronized. Check Root time and update Mesh management on Root and AP, then retry."
+msgstr "无法同步设备时间，请检查主节点时间，并更新主节点和 AP 的 Mesh管理后重试。"
+
+msgid "The wired interface has not obtained an IPv4 address. Check the cable and DHCP service; retrying in 30 seconds."
+msgstr "有线接口尚未取得 IPv4 地址，请检查接线和 DHCP 服务；30 秒后自动重试。"
+
+msgid "Managed configuration"
+msgstr "托管配置"
+
+msgid "WAN connection"
+msgstr "WAN 连接"
+
+msgid "Mesh peer authorization"
+msgstr "Mesh 对端授权"
+
+msgid "Roaming assistance stopped"
+msgstr "漫游辅助已停止"
+
+msgid "Roaming assistance running"
+msgstr "漫游辅助运行状态"
+
+msgid "Roaming coordination interfaces"
+msgstr "漫游协调接口"
+
+msgid "Wi-Fi access point (%s)"
+msgstr "无线接入点（%s）"
+
+msgid "Control address records conflict or are invalid. Configuration changes are blocked; keep the current settings and export diagnostics for investigation."
+msgstr "控制地址记录冲突或无效，已阻止配置变更。请保留当前设置，并导出诊断信息排查。"
+
+msgid "Management address mode"
+msgstr "管理地址获取方式"
+
+msgid "Wireless backhaul"
+msgstr "无线回程"
+
+msgid "The AP has not reported support for controller-assigned addresses. Wait for its next report; if this persists, update Root and AP together before retrying."
+msgstr "AP 尚未上报支持控制器分配地址。请等待下一次上报；若持续出现，请同时更新主节点和 AP 后重试。"
+
+msgid "Processing request…"
+msgstr "正在处理，请稍候…"
+
+msgid "The management network will change. This page may disconnect. Reconnect from the resulting LAN network and confirm before the deadline; otherwise the device will roll back automatically."
+msgstr "管理网络即将改变，当前页面可能断开。请从变更后的 LAN 网络重新登录，并在倒计时结束前确认；未确认将自动回滚。"
+
+msgid "Resulting management address"
+msgstr "变更后的管理地址"
+
+msgid "Assigned by upstream DHCP; check the Root node list"
+msgstr "由上游 DHCP 分配，请查看 Root 的节点列表"
+
+msgid "See the network changes below"
+msgstr "请查看下方网络变更"
+
+msgid "For remote AP shutdown, use the node button on Root. Root can verify and finish the change after the AP management address changes."
+msgstr "远程关闭 AP 时，建议使用 Root 节点页中的关闭按钮。AP 管理地址改变后，Root 仍可进行健康验证并完成关闭。"
+
+msgid "Root requires the isolated management connection for this operation. Check the control path, then retry."
+msgstr "Root 要求通过独立管理通道执行此操作。请检查管理链路后重试。"
+
+msgid "The management listener could not be verified. Update Root and AP together and check the service status."
+msgstr "无法核验管理服务入口。请同时更新 Root 和 AP，并检查服务状态。"
+
+msgid "Checking local DNS…"
+msgstr "正在检查本机 DNS…"
+
+msgid "Local DNS replied"
+msgstr "本机 DNS 已应答"
+
+msgid "No DNS reply"
+msgstr "DNS 未应答"
+
+msgid "Localhost record missing"
+msgstr "缺少 localhost 记录"
+
+msgid "Unexpected non-loopback answer"
+msgstr "返回了异常的非环回地址"
+
+msgid "DNS resolver"
+msgstr "DNS 解析器"
+
+msgid "Query"
+msgstr "查询"
+
+msgid "Answer"
+msgstr "应答"
+
+msgid "Check local DNS"
+msgstr "检查本机 DNS"
+
+msgid "This checks the local DNS response only. It does not verify upstream DNS or Internet domain resolution."
+msgstr "此结果只验证本机 DNS 应答，不代表上游 DNS 或互联网域名解析正常。"
+
+msgid "The local DNS check asks this device for the localhost A record, with a two-second DNS wait. No DNS server or network configuration is changed."
+msgstr "本机 DNS 检查向本设备查询 localhost 的 A 记录，DNS 等待上限为两秒，不修改 DNS 服务器或网络配置。"
+
+msgid "Loading node details…"
+msgstr "正在读取节点详情…"
+
+msgid "Node details"
+msgstr "节点详情"
+
+msgid "Managed differences"
+msgstr "托管偏差"
+
+msgid "Some node information is unavailable or last reported."
+msgstr "部分节点信息不可用，或来自最后一次上报。"
+
+msgid "Node details are unavailable. Reload the topology."
+msgstr "节点详情不可用，请重新读取拓扑。"
+
+msgid "No enrolled nodes"
+msgstr "没有已加入的节点"
+
+msgid "Loading topology…"
+msgstr "正在读取拓扑…"
+
+msgid "Topology is unavailable"
+msgstr "拓扑不可用"
+
+msgid "Topology changed or expired. Reload from the first page."
+msgstr "拓扑已变化或过期，请从第一页重新读取。"
+
+msgid "Topology update failed. Displayed nodes may be outdated."
+msgstr "拓扑更新失败，显示的节点信息可能已过期。"
+
+msgid "Reload topology"
+msgstr "重新读取拓扑"
+
+msgid "Check local address conflict"
+msgstr "检查本机地址冲突"
+
+msgid "Checking local address conflict…"
+msgstr "正在检查本机地址冲突…"
+
+msgid "Address conflict observed"
+msgstr "观察到地址冲突"
+
+msgid "No conflict observed in this check"
+msgstr "本次未观察到冲突"
+
+msgid "Scope"
+msgstr "检查范围"
+
+msgid "Local primary IPv4"
+msgstr "本机主 IPv4 地址"
+
+msgid "ARP probes / claims"
+msgstr "ARP 探测包 / 地址声明"
+
+msgid "No reply does not guarantee that the address is unused. This checks the current primary IPv4 only, not other addresses or IPv6."
+msgstr "没有应答不保证地址未被占用。本次只检查当前主 IPv4 地址，不包括其他地址或 IPv6。"
+
+msgid "The local address check sends two ARP probes for this device’s current primary LAN IPv4, within three seconds. It does not change addresses or scan other nodes."
+msgstr "本机地址检查在三秒内，为本设备当前 LAN 主 IPv4 地址发送两个 ARP 探测包，不修改地址、不扫描其他节点。"
+
+msgid "Incomplete"
+msgstr "不完整"
+
+msgid "PHY"
+msgstr "PHY"
+
+msgid "Backend channel"
+msgstr "后端报告信道"
+
+msgid "Reference power"
+msgstr "参考功率"
+
+msgid "No radio capabilities available"
+msgstr "射频能力不可用"
+
+msgid "Capabilities: %s"
+msgstr "射频详情：%s"
+
+msgid "Channel list"
+msgstr "信道列表"
+
+msgid "Power list"
+msgstr "功率列表"
+
+msgid "Backend channel list"
+msgstr "后端信道列表"
+
+msgid "Band"
+msgstr "频段"
+
+msgid "Frequency"
+msgstr "频率"
+
+msgid "Restrictions"
+msgstr "限制"
+
+msgid "No initiating radiation"
+msgstr "禁止主动发射"
+
+msgid "Indoor only"
+msgstr "仅限室内"
+
+msgid "No 10 MHz"
+msgstr "不支持 10 MHz"
+
+msgid "No 20 MHz"
+msgstr "不支持 20 MHz"
+
+msgid "No HT40+"
+msgstr "不支持 HT40+"
+
+msgid "No HT40-"
+msgstr "不支持 HT40-"
+
+msgid "No 80 MHz"
+msgstr "不支持 80 MHz"
+
+msgid "No 160 MHz"
+msgstr "不支持 160 MHz"
+
+msgid "No HE"
+msgstr "不支持 HE"
+
+msgid "No exposed restrictions"
+msgstr "后端未报告限制"
+
+msgid "Channel capabilities unavailable"
+msgstr "信道能力不可用"
+
+msgid "The displayed capability list is incomplete."
+msgstr "显示的能力列表不完整。"
+
+msgid "Backend power candidates"
+msgstr "后端功率候选值"
+
+msgid "The channel to which this list applies cannot be verified. These candidates cannot define a safe transmit-power limit."
+msgstr "无法核验此列表适用的信道，不能将这些候选值作为安全配置的发射功率上限。"
+
+msgid "The backend may fall back internally or match the same channel number in another band."
+msgstr "后端可能使用内部回退，或匹配其他频段中相同编号的信道。"
+
+msgid "World domain (00)"
+msgstr "全球默认域（00）"
+
+msgid "Intersection domain (98)"
+msgstr "交集监管域（98）"
+
+msgid "Unknown domain (99)"
+msgstr "未知监管域（99）"
+
+msgid "Device regulatory domain"
+msgstr "设备监管域"
+
+msgid "Global domain fallback"
+msgstr "全局监管域回退"
+
+msgid "Query complete"
+msgstr "查询完成"
+
+msgid "Partial data"
+msgstr "部分信息"
+
+msgid "CAC required"
+msgstr "需进行 CAC"
+
+msgid "Radar unavailable"
+msgstr "雷达避让中"
+
+msgid "Available at observation"
+msgstr "观测时可用"
+
+msgid "Regulatory domain"
+msgstr "监管域"
+
+msgid "Driver reported power"
+msgstr "驱动报告功率"
+
+msgid "Regulatory data unavailable"
+msgstr "监管信息不可用"
+
+msgid "Regulatory details: %s"
+msgstr "监管详情：%s"
+
+msgid "Configured country"
+msgstr "配置国家码"
+
+msgid "Domain source"
+msgstr "监管域来源"
+
+msgid "Reported domain"
+msgstr "报告的监管域"
+
+msgid "Global domain"
+msgstr "全局监管域"
+
+msgid "Driver reported frequency"
+msgstr "驱动报告频率"
+
+msgid "No HT"
+msgstr "不启用 HT"
+
+msgid "MLO operating data are unavailable in this check."
+msgstr "本次查询无法提供 MLO 的运行信息。"
+
+msgid "Frequency limits and DFS"
+msgstr "频率限制与 DFS"
+
+msgid "A usable DFS channel still requires CAC before transmission. Available is the observed kernel state, not a promise that it remains usable."
+msgstr "DFS 信道处于可进行检查状态时，发射前仍需完成 CAC。可用仅表示观测时的内核状态，不保证之后仍可用。"
+
+msgid "Regulatory power limit"
+msgstr "监管功率上限"
+
+msgid "DFS state"
+msgstr "DFS 状态"
+
+msgid "Required CAC"
+msgstr "所需 CAC 时长"
+
+msgid "No IBSS"
+msgstr "禁止 IBSS"
+
+msgid "Radar detection required"
+msgstr "需要雷达检测"
+
+msgid "No 320 MHz"
+msgstr "禁止 320 MHz"
+
+msgid "No EHT"
+msgstr "禁止 EHT"
+
+msgid "Concurrent radiation condition"
+msgstr "有并发发射限制"
+
+msgid "1 MHz allowed"
+msgstr "允许 1 MHz"
+
+msgid "2 MHz allowed"
+msgstr "允许 2 MHz"
+
+msgid "4 MHz allowed"
+msgstr "允许 4 MHz"
+
+msgid "8 MHz allowed"
+msgstr "允许 8 MHz"
+
+msgid "16 MHz allowed"
+msgstr "允许 16 MHz"
+
+msgid "State age unknown"
+msgstr "状态持续时间未知"
+
+msgid "State age: %s"
+msgstr "状态已持续：%s"
+
+msgid "Frequency limits unavailable"
+msgstr "频率限制不可用"
+
+msgid "The displayed frequency list is incomplete."
+msgstr "显示的频率列表不完整。"
+
+msgid "Driver reported power is not measured over-the-air power. Regulatory limits are separate from current power and backend power candidates."
+msgstr "驱动报告功率不代表空口实测功率。监管上限、当前报告功率和后端功率候选是不同的信息。"
+
+msgid "This query covers known diagnostic fields and does not grant configuration approval. Disabled frequencies remain disabled even when a power limit is shown."
+msgstr "本次查询仅涵盖已知诊断字段，不会授予配置修改许可。显示功率上限的禁用频率仍不可使用。"
+
+msgid "Some regulatory data are unavailable or incomplete."
+msgstr "部分监管信息不可用或不完整。"
+
+msgid "Reading regulatory limits…"
+msgstr "正在读取监管限制…"
+
+msgid "Refresh regulatory data"
+msgstr "刷新监管信息"
+
+msgid "Cancel regulatory check"
+msgstr "取消监管检查"
+
+msgid "View regulatory limits"
+msgstr "查看监管限制"
+
+msgid "Reads this device’s regulatory domain, frequency restrictions and DFS state on demand. It does not scan, set a country or change radio settings."
+msgstr "按需读取本机监管域、频率限制和 DFS 状态，不扫描、不设置国家码，也不修改射频配置。"
+
+msgid "Regulatory domain and DFS"
+msgstr "监管域与 DFS"
+
+msgid "A global domain fallback is not a device-specific country. DFS age is elapsed time in that state, not a CAC countdown."
+msgstr "全局监管域回退不代表设备独立的实际国家码。DFS 状态持续时间不是 CAC 剩余时间。"
+
+msgid "Diagnostic permission is required to inspect regulatory data."
+msgstr "需要诊断权限才能查询监管信息。"
+
+msgid "The device identity is not initialized. Regulatory inspection is unavailable."
+msgstr "设备身份尚未初始化，无法查询监管信息。"
+
+msgid "Backend power candidate"
+msgstr "后端功率候选值"
+
+msgid "Power capabilities unavailable"
+msgstr "功率能力不可用"
+
+msgid "Hardware power offset: %s"
+msgstr "硬件功率偏移：%s"
+
+msgid "Backend values are references and may use cached data. They do not prove current hardware state or actual transmit power."
+msgstr "后端数值仅供参考，可能来自缓存，不能证明当前硬件状态或实际发射功率。"
+
+msgid "DFS requirements are not exposed by this channel list. An empty restrictions list does not mean that a channel is free of DFS or immediately usable."
+msgstr "此信道列表未提供 DFS 要求。没有列出限制，不代表信道无需 DFS 或可立即使用。"
+
+msgid "Some radio capabilities are unavailable or incomplete."
+msgstr "部分射频能力不可用或不完整。"
+
+msgid "Reading radio capabilities…"
+msgstr "正在读取射频能力…"
+
+msgid "Cancelling check…"
+msgstr "正在取消检查…"
+
+msgid "Refresh radio capabilities"
+msgstr "刷新射频能力"
+
+msgid "Cancel radio check"
+msgstr "取消射频检查"
+
+msgid "View radio capabilities"
+msgstr "查看射频能力"
+
+msgid "Reads local radio capabilities on demand. It does not scan, change radio settings or start disabled radios."
+msgstr "按需读取本机射频能力，不扫描、不修改无线设置、不启动已禁用的射频。"
+
+msgid "Radio capabilities"
+msgstr "射频能力"
+
+msgid "Diagnostic permission is required to inspect radio capabilities."
+msgstr "查看射频能力需要诊断权限。"
+
+msgid "The device identity is not initialized. Radio inspection is unavailable."
+msgstr "本机身份尚未初始化，射频检查不可用。"
+
+msgid "Another diagnostic check is running. Refresh after it finishes."
+msgstr "其他诊断检查正在运行，请待其结束后刷新。"
+
+msgid "Checking runtime DNS candidates…"
+msgstr "正在检查运行时 DNS 候选…"
+
+msgid "Check runtime DNS candidates"
+msgstr "检查 DNS 上游候选"
+
+msgid "DNS replied"
+msgstr "DNS 已应答"
+
+msgid "Empty DNS answer"
+msgstr "DNS 应答无记录"
+
+msgid "DNS name not found"
+msgstr "DNS 名称不存在"
+
+msgid "DNS server failure"
+msgstr "DNS 服务器失败"
+
+msgid "DNS query refused"
+msgstr "DNS 拒绝查询"
+
+msgid "Truncated reply; TCP not checked"
+msgstr "应答截断；尚未检查 TCP"
+
+msgid "Local resolver; not checked"
+msgstr "本机 DNS；未检查"
+
+msgid "Not a unicast resolver"
+msgstr "不是单播 DNS 地址"
+
+msgid "Not checked within the candidate limit"
+msgstr "超过候选检查数量上限"
+
+msgid "No verified DNS reply"
+msgstr "未收到可验证的 DNS 应答"
+
+msgid "DNS transport unavailable"
+msgstr "DNS 通信不可用"
+
+msgid "DNS candidates / checked"
+msgstr "DNS 候选 / 已检查"
+
+msgid "Source interface"
+msgstr "来源接口"
+
+msgid "Elapsed time"
+msgstr "耗时"
+
+msgid "No testable runtime DNS candidates"
+msgstr "没有可检查的运行时 DNS 候选"
+
+msgid "Checks IPv4 DNS candidates reported by netifd. Custom DNS policies, proxies, IPv6 and TCP are not checked; a reply does not prove Internet access."
+msgstr "仅检查 netifd 上报的 IPv4 DNS 候选；未检查自定义 DNS 策略、代理、IPv6 或 TCP。收到应答不代表互联网访问正常。"
+
+msgid "The runtime DNS check sends one root NS query to each of at most four netifd IPv4 DNS candidates. It preserves DNS and network settings."
+msgstr "向最多四个 netifd 上报的 IPv4 DNS 候选各发送一次根域 NS 查询，不修改 DNS 和网络设置。"
+
+msgid "Disable Mesh on every AP and restore its original settings before disabling Root or revoking its identity."
+msgstr "请先关闭所有 AP 的 Mesh 并恢复原配置，再关闭 Root 或撤销 AP 身份。"
+
+msgid "AP restoration has not been verified. Keep Root enabled and reconnect the AP to complete restoration."
+msgstr "尚未验证 AP 已恢复原配置。请保留 Root 开启，重新连接 AP 并完成恢复。"
+
+msgid "The AP has not provided a fresh verified report. Reconnect it and retry after its status updates."
+msgstr "AP 尚未提供新的可验证状态报告。请重新连接，待状态更新后重试。"
+
+msgid "Disable this AP’s Mesh and verify restoration before revoking its identity. Revocation does not rotate the shared wireless backhaul key."
+msgstr "请先关闭该 AP 的 Mesh 并验证原配置已恢复，再撤销身份。撤销身份暂不会轮换共享无线回程密钥。"
+
+msgid "DNS query format rejected"
+msgstr "DNS 拒绝查询格式"
+
+msgid "DNS query not supported"
+msgstr "DNS 不支持此查询"
+
+msgid "Other DNS response code"
+msgstr "其他 DNS 应答代码"
+
+msgid "DNS endpoint unreachable"
+msgstr "DNS 端点不可达"
+
+msgid "DNS receive limit reached"
+msgstr "DNS 应答接收量超过上限"
+
+msgid "DNS candidate unavailable"
+msgstr "DNS 候选不可用"
+
+msgid "DNS query entropy unavailable"
+msgstr "无法生成 DNS 查询随机标识"
+
+msgid "Monotonic clock unavailable"
+msgstr "单调时钟不可用"
+
+msgid "DNS query could not be sent"
+msgstr "无法发送 DNS 查询"
+
+msgid "DNS reply could not be read"
+msgstr "无法读取 DNS 应答"
+
+msgid "Original settings have been restored. This operation only repeats health verification without changing configuration."
+msgstr "原配置已恢复。本次只重新进行健康验证，不修改配置。"
+
+msgid "Verify restoration"
+msgstr "验证恢复"
+
+msgid "Automatic discovery is unavailable; retrying."
+msgstr "自动发现暂不可用，正在重试。"
+
+msgid "Wireless capabilities are unavailable; changes will be preflighted."
+msgstr "无线能力暂不可用，保存时会重新预检。"
+
+msgid "Checking wireless capabilities; changes will be preflighted."
+msgstr "正在检测无线能力，保存时会重新预检。"
+
+msgid "Could not verify"
+msgstr "未能验证"
+
+msgid "Mesh restoration could not be verified. Check the actual network and change records; external configuration was preserved."
+msgstr "无法验证 Mesh 恢复结果。请检查实际网络和变更记录；外部配置已保留。"
+
+msgid "Settings changed during first configuration. Existing values and joining credentials were preserved. Check node changes before retrying."
+msgstr "首次配置期间设置发生变化，已保留现有值和入网凭据。请查看节点变更后再重试。"
+
+msgid "First configuration requires recovery or review. Mesh will not restart the temporary connection automatically. Check change records."
+msgstr "首次配置需要恢复或检查，不会自动重新建立临时连接。请查看变更记录。"
+
+msgid "Waiting for Root to confirm the first configuration over the managed connection. Joining credentials are retained; retrying automatically."
+msgstr "等待主节点通过受管连接确认首次配置，已保留入网凭据，将自动重试。"
+
+msgid "Waiting for managed connection confirmation"
+msgstr "等待受管连接确认"
+
+msgid "Configuration rolled back; retrying after 30 seconds"
+msgstr "配置已回滚，等待 30 秒后重试"
+
+msgid "Configuration rolled back; waiting for the controller connection before retrying"
+msgstr "配置已回滚，等待连接控制器后重试"
+
+msgid "Recovery conflict; inspect node changes before retrying"
+msgstr "回滚存在冲突，请先检查节点变更"
+
+msgid "Health confirmation timed out; the previous configuration was restored. Inspect the failed health checks."
+msgstr "健康确认超时，已恢复变更前配置。请查看未通过的健康检查。"
+
+msgid "The device rebooted before confirmation; the previous configuration was restored."
+msgstr "设备在确认前重启，已恢复变更前配置。"
+
+msgid "The installed Wi-Fi components incorrectly reject interface activation. Update or repair the firmware components before joining; extending the timeout will not help."
+msgstr "当前 Wi-Fi 组件错误地拒绝启用接口。请先更新或修复固件组件再加入；延长超时不能解决此问题。"
+
+msgid "Waiting for first configuration"
+msgstr "等待首次配置"
+
+msgid "Firmware components need repair"
+msgstr "需要修复固件组件"
+
+msgid "Configuration preflight failed; waiting for the issue to be resolved"
+msgstr "配置预检未通过，等待修复后重试"
+
+msgid "Clear records"
+msgstr "清理记录"
+
+msgid "Clearing records…"
+msgstr "正在清理记录…"
+
+msgid "Cleared %s records."
+msgstr "已清理 %s 条记录。"
+
+msgid "Records changed. Close this dialog and refresh before clearing."
+msgstr "记录已发生变化。请关闭此窗口，刷新后重新确认清理。"
+
+msgid "Clear all %s records in “%s”?"
+msgstr "是否清理全部 %s 条记录（%s）？"
+
+msgid "Only this device’s history in this group is cleared. Running operations, Mesh settings and recovery backups are preserved."
+msgstr "仅清理本设备这一类历史记录。正在执行的操作、Mesh 配置和恢复备份会保留。"
+
+msgid "No node repairs"
+msgstr "暂无节点修复记录"
+
+msgid "No Mesh operation records"
+msgstr "暂无 Mesh 启停记录"
+
+msgid "The AP will finish restoring after local LAN health checks pass. The controller result updates when contact resumes."
+msgstr "本机 LAN 健康检查通过后，AP 将完成恢复；重新联系控制器后更新管理端结果。"
+
+msgid "Controller loss recovery"
+msgstr "Root 失联恢复"
+
+msgid "Mesh was automatically disabled after losing authenticated controller contact. Connect to LAN using the restored management address to configure this device."
+msgstr "持续无法与 Root 建立认证连接，已自动关闭本机 Mesh。请连接 LAN 口，用恢复后的管理地址配置设备。"
+
+msgid "Controller contact was lost. The AP is restoring its original LAN configuration."
+msgstr "无法联系 Root，AP 正在恢复接管前的 LAN 配置。"
+
+msgid "Automatic restoration could not be verified. Check the transaction result, configuration conflicts and diagnostics."
+msgstr "失联自动恢复未通过验证，请查看事务结果、配置冲突和网络诊断。"
+
+msgid "Background services"
+msgstr "后台服务"
+
+msgid "Stopped; starts when needed"
+msgstr "已停止，操作时启动"
+
+msgid "Standby for remote management"
+msgstr "待命，保留远程管理"
+
+msgid "Recovery in progress"
+msgstr "正在恢复配置"
+
+msgid "Revocation records (%s)"
+msgstr "撤销记录（%s）"
+
+msgid "Revoked at"
+msgstr "撤销时间"
+
+msgid "Configuration restoration"
+msgstr "配置恢复"
+
+msgid "Needs verification"
+msgstr "待验证"
+
+msgid "Join Mesh"
+msgstr "加入 Mesh"
+
+msgid "Stop joining"
+msgstr "停止加入"
+
+msgid "The controller accepts Mesh routers automatically. This device applies the network configuration after health checks pass."
+msgstr "主节点自动接纳 Mesh 路由器。本机将在健康检查通过后提交网络配置。"
+
+msgid "Connect to the controller Wi-Fi. Mesh routers are accepted automatically; ordinary Wi-Fi clients remain clients."
+msgstr "连接主节点 Wi-Fi 后，Mesh 路由器会自动加入；手机等普通终端仍是普通客户端。"
+
+msgid "For wired joining, connect this router to the controller LAN. For wireless joining, enter the controller Wi-Fi name and password."
+msgstr "有线加入：连接主节点的 LAN 口。无线加入：输入主节点的 Wi-Fi 名称和密码。"
+
+msgid "Waiting for the controller to become available"
+msgstr "等待主节点可用"
+
+msgid "Registering node identity"
+msgstr "正在登记节点身份"
+
+msgid "Stopping background services"
+msgstr "后台服务正在停止"
+
+msgid "Updating background services"
+msgstr "后台服务调整中"

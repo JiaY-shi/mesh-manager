@@ -1,0 +1,14 @@
+{
+	"admin/network/mesh-manager": {
+		"title": "Mesh Manager", "order": 95,
+		"action": { "type": "firstchild" },
+		"depends": { "acl": ["luci-app-mesh-manager"] }
+	},
+	"admin/network/mesh-manager/overview": { "title": "Overview", "order": 10, "action": { "type": "view", "path": "mesh-manager/overview" } },
+	"admin/network/mesh-manager/nodes": { "title": "Nodes", "order": 20, "action": { "type": "view", "path": "mesh-manager/nodes" } },
+	"admin/network/mesh-manager/wireless": { "title": "Wireless", "order": 30, "action": { "type": "view", "path": "mesh-manager/wireless" } },
+	"admin/network/mesh-manager/backhaul": { "title": "Backhaul", "order": 40, "action": { "type": "view", "path": "mesh-manager/backhaul" } },
+	"admin/network/mesh-manager/clients": { "title": "Clients", "order": 50, "action": { "type": "view", "path": "mesh-manager/clients" } },
+	"admin/network/mesh-manager/history": { "title": "Changes", "order": 60, "action": { "type": "view", "path": "mesh-manager/history" } },
+	"admin/network/mesh-manager/diagnostics": { "title": "Diagnostics", "order": 70, "action": { "type": "view", "path": "mesh-manager/diagnostics" } }
+}

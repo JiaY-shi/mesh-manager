@@ -1,0 +1,88 @@
+{
+  "luci-app-mesh-manager": {
+    "description": "Read Mesh Manager status and manage guarded local transactions",
+    "read": {
+      "ubus": {
+        "mesh-manager.topology": [
+          "nodes",
+          "links",
+          "detail"
+        ],
+        "mesh-manager.diag": [
+          "export",
+          "logs",
+          "packages",
+          "job_get",
+          "job_cancel"
+        ],
+        "mesh-manager.sync": [
+          "history"
+        ],
+        "mesh-manager.roaming": [
+          "status",
+          "clients",
+          "history"
+        ],
+        "mesh-manager": [
+          "status",
+          "status_detail",
+          "diagnostics",
+          "discover",
+          "onboard_status"
+        ]
+      }
+    },
+    "write": {
+      "ubus": {
+        "mesh-manager.diag": [
+          "clear_logs",
+          "run",
+          "job_get",
+          "job_cancel"
+        ],
+        "mesh-manager": [
+          "preview",
+          "stage",
+          "apply",
+          "confirm",
+          "rollback",
+          "controller_init",
+          "node_revoke",
+          "node_rename",
+          "node_rename_preview",
+          "cluster_preflight",
+          "cluster_apply",
+          "cluster_rollback",
+          "local_overrides",
+          "onboard_stop",
+          "repair_preview",
+          "repair_stage",
+          "repair_confirm",
+          "node_repair",
+          "node_repair_apply",
+          "node_repair_rollback",
+          "setup_create",
+          "mesh_preview",
+          "mesh_stage",
+          "mesh_confirm",
+          "mesh_stop_prepare",
+          "node_mesh_prepare",
+          "mesh_stop_apply",
+          "mesh_stop_cancel",
+          "enrollment_start",
+          "enrollment_stop",
+          "local_overrides_preview",
+          "local_overrides_stage",
+          "local_overrides_confirm"
+        ],
+        "mesh-manager.sync": [
+          "repair_preview",
+          "clear_history",
+          "job_get",
+          "job_cancel",
+          "local_overrides_preview"
+        ]
+      }
+    }
+  }
+}

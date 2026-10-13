@@ -1,0 +1,33 @@
+#!/usr/bin/ucode
+// SPDX-License-Identifier: GPL-2.0-only
+'use strict';
+import * as fs from 'fs';
+import * as uloop from 'uloop';
+import { collection_start } from 'mesh_manager.collection';
+import { backhaul_tick, fail_closed } from 'mesh_manager.backhaul_runtime';
+
+uloop.init();
+const stop_collection = collection_start();
+let timer;
+
+function tick() {
+	let result = { ok: true, timestamp: time() };
+	try {
+		backhaul_tick();
+	} catch (e) {
+		let code = match(e.message || '', /^([a-z_]{1,32}): /)?.[1] || 'internal_error';
+		result = { ok: false, error: code, timestamp: time() };
+		// An uncertain topology is never allowed to leave both bridge paths active.
+		try {
+			fail_closed();
+		} catch (ignored) {
+			result.error = 'path_block_failed';
+		}
+	}
+	fs.writefile('/var/run/mesh-manager-backhaul-health.json', sprintf('%J', result));
+	timer.set(5000);
+}
+
+timer = uloop.timer(1000, tick);
+uloop.run();
+stop_collection();

@@ -1,0 +1,26 @@
+#!/usr/bin/ucode
+// SPDX-License-Identifier: GPL-2.0-only
+'use strict';
+import * as fs from 'fs';
+import * as native from 'mesh_onboard';
+import * as crypto from 'mesh_crypto';
+import { run } from 'mesh_process';
+import { onboard_worker } from 'mesh_manager.onboard_worker';
+import { approval_valid, approval_transport_valid } from 'mesh_manager.joining_exchange';
+import { handoff_state, handoff_transport_valid } from 'mesh_manager.first_handoff';
+let replied=false;
+function ready(value) {if(replied)return;replied=true;print(sprintf('%J\n',value));fs.stdout.flush();fs.stdout.close();}
+try {
+ let text=fs.stdin.read(2*1024*1024+32769);fs.stdin.close();
+ if(length(ARGV) || !text || length(text)>2*1024*1024+32768)die('invalid_request: Invalid private onboarding input');
+ let spec=json(text);
+ function journal(){let value=native.journal();if(value?.error || type(value)!='object')die('runtime_unavailable: Initial journal unavailable');return value.raw;}
+ onboard_worker(spec,{scope:native.scope,now:native.now,begin:spec.mode=='discover' ? native.begin_discover : spec.mode=='standby' ? native.begin_standby : spec.mode=='handoff' ? native.begin_handoff : spec.mode=='resume' ? native.begin_resume : native.begin,raw:v=>({...v,identity:v.raw_identity}),ready,
+  verify:{ca:(pem,fp)=>type(pem)=='string' && crypto.fingerprint(pem)==fp,leaf:crypto.verify_leaf,digest:crypto.sha256,hmac:crypto.hmac,approval:approval_valid,
+   transport_approval:approval_transport_valid,journal,
+   handoff_transport:(scope,ref)=>handoff_transport_valid(scope,journal(),scope.boot,native.now(),ref),
+   handoff_cold:scope=>{let actual=journal(),state=handoff_state(scope,actual,scope.snapshot,scope.boot,native.now());
+    return actual===scope.state && state.stage=='configuring' && state.restore===true;}},
+  association:bssid=>{let value=run(['/usr/sbin/iw','dev','mm-onboard','link'],'',2000);
+   return value?.code==0 && lc(match(value.stdout,/^Connected to ([0-9a-fA-F:]{17}) /)?.[1] || '')==bssid;}});
+}catch(e){ready({error:'onboarding_failed'});}

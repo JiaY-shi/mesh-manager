@@ -1,0 +1,51 @@
+#!/usr/bin/ucode
+// SPDX-License-Identifier: GPL-2.0-only
+'use strict';
+import * as uloop from 'uloop';
+import { collection_start } from 'mesh_manager.collection';
+import { locked, heartbeat, recovery_pending } from 'mesh_manager.runtime';
+import { onboard_status, onboard_pending } from 'mesh_manager.onboarding';
+import { note } from 'mesh_manager.event_log';
+import { start } from 'mesh_process';
+import { controller_loss_tick } from 'mesh_manager.controller_loss_runtime';
+import { feature_controller, feature_now, feature_boot, feature_signature, feature_cache_frame, publish_feature_cache } from 'mesh_manager.capability_features';
+import { reconcile_services } from 'mesh_manager.service_runtime';
+
+uloop.init();
+const stop_collection = collection_start();
+let watchdog;
+function recovery_work() {
+	try { return recovery_pending() || onboard_pending(); } catch(e) { return true; }
+}
+let wireless = feature_controller({now:feature_now,boot:feature_boot,signature:feature_signature,
+	read:feature_cache_frame,publish:publish_feature_cache,pending:recovery_work,
+	spawn:(input,budget,done)=>start(['/usr/bin/ucode','/usr/libexec/mesh-manager-wireless-features'],sprintf('%J',input),budget,done)});
+function tick() {
+	let delay = 2000;
+	try {
+		let pending=recovery_pending() || onboard_pending();
+		if (pending) { wireless.tick(true); locked(service => { onboard_status(); service.tick(); }); }
+		controller_loss_tick();
+		heartbeat(); note('recovery','ok',null);
+		reconcile_services();
+		wireless.tick(pending);
+	}
+	catch (e) {
+		wireless.tick(true);
+		let message = type(e) == 'object' && type(e.message) == 'string' ? e.message : '';
+		let code = match(split(message, '\n')[0], /^([a-z_]{1,32}): /)?.[1];
+		if (code == 'busy') delay = 250;
+		if (code != 'busy') {
+			if (index(['clock_error', 'storage_error', 'corrupt_state', 'configuration_error',
+				'ownership_conflict', 'write_error', 'reload_error', 'entropy_error'], code) < 0) code = 'internal_error';
+			note('recovery',code,null);
+			warn('mesh-manager: recovery check failed (' + code + '); inspect journal and configuration\n');
+		}
+	}
+	watchdog.set(delay);
+}
+watchdog = uloop.timer(1, tick);
+function stop() { stop_collection(); wireless.stop(); watchdog.cancel(); uloop.end(); }
+signal('SIGTERM',stop); signal('SIGINT',stop);
+uloop.run();
+stop_collection();

@@ -1,0 +1,18 @@
+#!/bin/sh
+# The inherited pipe belongs to this exact actor/DHCP attempt. The hook never
+# changes an interface, address, route, shared file or system DNS.
+[ "$interface" = mm-onboard ] || exit 1
+[ "$1" = bound ] || exit 0
+case "$ip $subnet $lease" in
+ *[!0-9.\ ]*|'  ') exit 1 ;;
+esac
+[ ${#ip} -le 15 ] && [ ${#subnet} -le 15 ] && [ ${#lease} -le 5 ] || exit 1
+[ -n "$ip" ] && [ -n "$subnet" ] && [ -n "$lease" ] || exit 1
+# udhcpc reserves 3 and 4 for its signal pipe. Only this actor passes FD 9.
+gateway=${router%% *}
+case "$gateway" in *[!0-9.]*|'') gateway= ;; esac
+if [ -n "$gateway" ] && [ ${#gateway} -le 15 ]; then
+ printf '%s %s %s %s\n' "$ip" "$subnet" "$lease" "$gateway" >&9
+else
+ printf '%s %s %s\n' "$ip" "$subnet" "$lease" >&9
+fi

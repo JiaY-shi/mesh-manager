@@ -1,0 +1,13 @@
+#!/usr/bin/ucode
+// SPDX-License-Identifier: GPL-2.0-only
+'use strict';
+import * as fs from 'fs';
+import { peer_request } from 'mesh_manager.advanced';
+import { decode_request } from 'mesh_manager.protocol_worker';
+let result;
+try {
+	let input=fs.stdin.read(65537);
+	if (ARGV[1]=='node' && !match(ARGV[5] || '',/^[0-9a-f]{64}$/)) die('not_authorized: Native peer certificate is missing');
+	result={ok:true,data:peer_request(ARGV[0],ARGV[1],decode_request(input,ARGV[1],ARGV[3] || 'api'),ARGV[2],ARGV[4],ARGV[5])};
+} catch(e){result={ok:false,error:{code:match(e.message || '',/^([a-z_]{1,32}): /)?.[1] || 'internal_error',message:'Mesh peer request rejected'}};}
+print(sprintf('%J',result));

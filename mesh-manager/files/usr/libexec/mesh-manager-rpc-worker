@@ -1,0 +1,15 @@
+#!/usr/bin/ucode
+// SPDX-License-Identifier: GPL-2.0-only
+'use strict';
+import { invoke } from 'mesh_manager.rpc_dispatch';
+import { preview_work } from 'mesh_manager.rpc_async';
+import { active_check, package_check } from 'mesh_manager.diagnostic_service';
+import * as fs from 'fs';
+if (length(ARGV) != 1 || index(['repair_preview','repair_stage','local_overrides_preview','local_overrides_stage','local_overrides_confirm','mesh_preview','mesh_stage','mesh_confirm','diagnostic_run','diagnostic_packages','discover','preview','stage','cluster_preflight','cluster_apply','setup_create'], ARGV[0]) < 0) exit(1);
+let input = fs.stdin.read(131073) || '';
+if (length(input) > 131072) exit(1);
+let args = length(input) ? json(input) : {};
+if (type(args) != 'object') exit(1);
+delete args.ubus_rpc_session;
+let result = ARGV[0]=='diagnostic_packages' ? package_check(args) : ARGV[0]=='diagnostic_run' ? active_check(args) : index(['repair_preview','local_overrides_preview','mesh_preview'],ARGV[0]) >= 0 ? preview_work(() => invoke(ARGV[0], args)) : invoke(ARGV[0], args);
+print(sprintf('%J', result));

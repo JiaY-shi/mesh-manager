@@ -1,0 +1,12 @@
+#!/usr/bin/ucode
+// SPDX-License-Identifier: GPL-2.0-only
+'use strict';
+import * as fs from 'fs';
+import { run } from 'mesh_process';
+import { feature_worker } from 'mesh_manager.capability_features';
+try {
+	let raw=fs.stdin.read(4097);
+	if(type(raw)!='string' || length(raw)>4096)exit(1);
+	let result=feature_worker(run,json(raw)),output=sprintf('%J',result);
+	if(length(output)>4096)exit(1);printf('%s\n',output);
+} catch(e) {exit(1);}

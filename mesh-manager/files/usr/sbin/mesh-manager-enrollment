@@ -1,0 +1,20 @@
+#!/usr/bin/ucode
+// SPDX-License-Identifier: GPL-2.0-only
+'use strict';
+import * as uloop from 'uloop';
+import { collection_start } from 'mesh_manager.collection';
+import { load } from 'mesh_manager.durable';
+import { enrollment_runner } from 'mesh_manager.enrollment_schedule';
+uloop.init();
+const stop_collection = collection_start();
+let timer;
+const work=enrollment_runner(()=>load('identity.json'),()=>require('mesh_manager.enrollment_worker'));
+function tick() {
+	// Lost owners cannot mint another run_id in the same process. procd starts
+	// a new PID/start_ticks after this process exits; ordinary I/O failures back off.
+	try { if(work()===false)exit(1); } catch (e) {}
+	timer.set(3000);
+}
+timer = uloop.timer(1000, tick);
+uloop.run();
+stop_collection();

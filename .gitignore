@@ -1,0 +1,26 @@
+# OpenWrt build products and local configuration
+/bin/
+/build_dir/
+/staging_dir/
+/tmp/
+.config*
+*.o
+*.a
+*.so
+*.apk
+*.ipk
+*.lmo
+
+# Tests and documentation live beside this source repository
+/tests/
+/docs/
+/mesh-manager/tests/
+/luci-app-mesh-manager/tests/
+
+# Local tooling and private diagnostics
+__pycache__/
+*.pyc
+node_modules/
+*.private
+*.swp
+*.swo
