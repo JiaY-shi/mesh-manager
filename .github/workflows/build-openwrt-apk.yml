@@ -1,0 +1,277 @@
+name: Build OpenWrt APK packages
+
+on:
+  workflow_dispatch:
+    inputs:
+      architecture:
+        description: Architecture to build
+        required: true
+        default: all
+        type: choice
+        options:
+          - all
+          - x86_64
+          - aarch64_generic
+          - aarch64_cortex-a53
+          - arm_cortex-a7_neon-vfpv4
+          - mips_24kc
+          - mipsel_24kc
+      release_tag:
+        description: Release tag (leave empty to use the package version)
+        required: false
+        type: string
+      prerelease:
+        description: Mark a newly created release as a prerelease
+        required: true
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+
+# Runs updating the same release must finish in sequence, including builds
+# requested for different architectures.
+concurrency:
+  group: mesh-manager-openwrt-apk
+  cancel-in-progress: false
+
+jobs:
+  prepare:
+    name: Prepare build matrix
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    outputs:
+      architectures: ${{ steps.matrix.outputs.architectures }}
+      release_tag: ${{ steps.release.outputs.release_tag }}
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Select architectures
+        id: matrix
+        shell: bash
+        env:
+          SELECTED_ARCH: ${{ inputs.architecture }}
+        run: |
+          set -euo pipefail
+
+          case "$SELECTED_ARCH" in
+            all)
+              architectures='["x86_64","aarch64_generic","aarch64_cortex-a53","arm_cortex-a7_neon-vfpv4","mips_24kc","mipsel_24kc"]'
+              ;;
+            x86_64|aarch64_generic|aarch64_cortex-a53|arm_cortex-a7_neon-vfpv4|mips_24kc|mipsel_24kc)
+              architectures="[\"$SELECTED_ARCH\"]"
+              ;;
+            *)
+              echo "Unsupported architecture: $SELECTED_ARCH" >&2
+              exit 1
+              ;;
+          esac
+
+          echo "architectures=$architectures" >> "$GITHUB_OUTPUT"
+
+      - name: Select release tag
+        id: release
+        shell: bash
+        env:
+          REQUESTED_TAG: ${{ inputs.release_tag }}
+        run: |
+          set -euo pipefail
+
+          release_tag="$REQUESTED_TAG"
+          if [ -z "$release_tag" ]; then
+            package_version="$(sed -n 's/^PKG_VERSION:=//p' mesh-manager/Makefile)"
+            if [ -z "$package_version" ]; then
+              echo "Unable to read PKG_VERSION from mesh-manager/Makefile" >&2
+              exit 1
+            fi
+            release_tag="v$package_version"
+          fi
+
+          if [[ ! "$release_tag" =~ ^[A-Za-z0-9][A-Za-z0-9._-]*$ ]] ||
+            ! git check-ref-format "refs/tags/$release_tag"; then
+            echo "Invalid release tag: $release_tag" >&2
+            exit 1
+          fi
+
+          if git show-ref --verify --quiet "refs/tags/$release_tag"; then
+            tag_commit="$(git rev-parse "refs/tags/$release_tag^{commit}")"
+            if [ "$tag_commit" != "$GITHUB_SHA" ]; then
+              echo "Tag $release_tag belongs to another commit; choose a new tag." >&2
+              exit 1
+            fi
+          fi
+
+          echo "release_tag=$release_tag" >> "$GITHUB_OUTPUT"
+
+  build:
+    name: Build ${{ matrix.architecture }}
+    needs: prepare
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix:
+        architecture: ${{ fromJSON(needs.prepare.outputs.architectures) }}
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Prepare artifact directory
+        shell: bash
+        env:
+          OUTPUT_DIR: ${{ github.workspace }}/artifacts/${{ matrix.architecture }}
+        run: mkdir -p "$OUTPUT_DIR"
+
+      - name: Build packages with the OpenWrt SDK
+        uses: openwrt/gh-action-sdk@v11
+        env:
+          ARCH: ${{ matrix.architecture }}-master
+          ARTIFACTS_DIR: ${{ github.workspace }}/artifacts/${{ matrix.architecture }}
+          FEED_DIR: ${{ github.workspace }}
+          FEEDNAME: mesh_manager
+          # Install hostapd first so Kconfig can select a compatible wpad.
+          # The LuCI target also builds its Simplified Chinese translation.
+          PACKAGES: hostapd mesh-manager luci-app-mesh-manager
+          BUILD_LOG: 1
+          V: s
+
+      - name: Prepare release APK packages
+        shell: bash
+        env:
+          OUTPUT_DIR: ${{ github.workspace }}/artifacts/${{ matrix.architecture }}
+          RELEASE_DIR: ${{ github.workspace }}/release/${{ matrix.architecture }}
+          PACKAGE_ARCH: ${{ matrix.architecture }}
+        run: |
+          set -euo pipefail
+
+          mkdir -p "$RELEASE_DIR"
+          for package in \
+            mesh-manager \
+            luci-app-mesh-manager \
+            luci-i18n-mesh-manager-zh-cn; do
+            mapfile -d '' matches < <(
+              find "$OUTPUT_DIR" -type f -name "$package-*.apk" -print0
+            )
+            if [ "${#matches[@]}" -ne 1 ]; then
+              echo "Expected one APK for $package; found ${#matches[@]}" >&2
+              exit 1
+            fi
+            cp "${matches[0]}" "$RELEASE_DIR/$package-$PACKAGE_ARCH.apk"
+          done
+
+          (
+            cd "$RELEASE_DIR"
+            sha256sum -- *.apk > "sha256sums-$PACKAGE_ARCH.txt"
+          )
+
+      - name: Stage APK packages for release
+        uses: actions/upload-artifact@v4
+        with:
+          name: mesh-manager-release-${{ matrix.architecture }}
+          path: ${{ github.workspace }}/release/${{ matrix.architecture }}/*
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: Upload failed build logs
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mesh-manager-build-logs-${{ matrix.architecture }}
+          path: ${{ github.workspace }}/artifacts/${{ matrix.architecture }}/logs
+          if-no-files-found: ignore
+          retention-days: 7
+
+  release:
+    name: Publish GitHub release
+    needs:
+      - prepare
+      - build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: write
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Download built APK packages
+        uses: actions/download-artifact@v4
+        with:
+          pattern: mesh-manager-release-*
+          path: ${{ github.workspace }}/release-assets
+          merge-multiple: true
+
+      - name: Create release and upload APK packages
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ needs.prepare.outputs.release_tag }}
+          ARCHITECTURES: ${{ needs.prepare.outputs.architectures }}
+          PRERELEASE: ${{ inputs.prerelease }}
+        run: |
+          set -euo pipefail
+
+          asset_dir="$GITHUB_WORKSPACE/release-assets"
+          mapfile -t architectures < <(
+            python3 -c 'import json, os; print("\n".join(json.loads(os.environ["ARCHITECTURES"])))'
+          )
+          for architecture in "${architectures[@]}"; do
+            for package in \
+              mesh-manager \
+              luci-app-mesh-manager \
+              luci-i18n-mesh-manager-zh-cn; do
+              if [ ! -s "$asset_dir/$package-$architecture.apk" ]; then
+                echo "Missing release APK: $package-$architecture.apk" >&2
+                exit 1
+              fi
+            done
+            (
+              cd "$asset_dir"
+              sha256sum --check "sha256sums-$architecture.txt"
+            )
+          done
+
+          shopt -s nullglob
+          assets=("$asset_dir"/*.apk "$asset_dir"/sha256sums-*.txt)
+          if [ "${#assets[@]}" -eq 0 ]; then
+            echo "No APK packages are available for release" >&2
+            exit 1
+          fi
+
+          if git show-ref --verify --quiet "refs/tags/$RELEASE_TAG"; then
+            tag_commit="$(git rev-parse "refs/tags/$RELEASE_TAG^{commit}")"
+            if [ "$tag_commit" != "$GITHUB_SHA" ]; then
+              echo "Tag $RELEASE_TAG belongs to another commit; choose a new tag." >&2
+              exit 1
+            fi
+          fi
+
+          if gh release view "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            gh release edit "$RELEASE_TAG" \
+              --repo "$GITHUB_REPOSITORY" \
+              --title "Mesh Manager $RELEASE_TAG" \
+              --notes-file "$GITHUB_WORKSPACE/.github/release-notes.md"
+            gh release upload "$RELEASE_TAG" "${assets[@]}" \
+              --repo "$GITHUB_REPOSITORY" --clobber
+          else
+            create_args=(
+              "$RELEASE_TAG"
+              --repo "$GITHUB_REPOSITORY"
+              --target "$GITHUB_SHA"
+              --title "Mesh Manager $RELEASE_TAG"
+              --notes-file "$GITHUB_WORKSPACE/.github/release-notes.md"
+            )
+            if [ "$PRERELEASE" = "true" ]; then
+              create_args+=(--prerelease)
+            fi
+            gh release create "${create_args[@]}" "${assets[@]}"
+          fi
