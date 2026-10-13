@@ -969,8 +969,8 @@ msgstr "留空保留当前密码"
 msgid "Keep existing or generate automatically"
 msgstr "保留现有密钥，首次启用时自动生成"
 
-msgid "Leave empty to keep the existing same-mode backhaul secret. A new wireless backhaul or a mode change generates an independent random secret automatically."
-msgstr "回程模式不变时，留空保留现有密钥。首次启用无线回程或改变模式时，会自动生成独立随机密钥，无需自行设置。"
+msgid "Leave empty to keep the existing wireless backhaul secret, including when switching between wireless and wired preferred modes. A new wireless backhaul generates an independent random secret automatically."
+msgstr "留空保留已有无线回程密码，包括在无线与有线优先模式之间切换。首次启用无线回程时，会自动生成独立随机密码，无需自行设置。"
 
 msgid "Save & Apply"
 msgstr "保存并应用"

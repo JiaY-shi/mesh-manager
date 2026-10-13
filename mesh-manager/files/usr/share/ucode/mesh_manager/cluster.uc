@@ -11,6 +11,13 @@ import { lifecycle_service, lifecycle_busy } from './lifecycle.uc';
 import { handoff_receipt } from './handoff_controller.uc';
 import { restored_member } from './restoration.uc';
 
+function wireless_auto_recovery(before, after) {
+	if (before?.backhaul?.mode != 'wireless' || after?.backhaul?.mode != 'auto') return false;
+	let restored = clone(before);
+	restored.backhaul.mode = 'auto';
+	return equal(restored, after);
+}
+
 function validate_control_vlan(before, after) {
 	// Neither batch ordering preserves isolated control during VLAN migration.
 	if (before && (before.backhaul?.control_vlan ?? 4094) != (after.backhaul?.control_vlan ?? 4094))
@@ -92,7 +99,9 @@ export function cluster_service(io, pairing) {
 		if (
 			intent?.backhaul &&
 			intent.backhaul.key == null &&
-			intent.backhaul.mode == s.intent?.backhaul?.mode &&
+			(intent.backhaul.mode == s.intent?.backhaul?.mode ||
+				index(['auto', 'wireless'], intent.backhaul.mode) >= 0 &&
+				index(['auto', 'wireless'], s.intent?.backhaul?.mode) >= 0) &&
 			s.intent.backhaul.key
 		)
 			intent.backhaul.key = s.intent.backhaul.key;
@@ -123,7 +132,10 @@ export function cluster_service(io, pairing) {
 		if (repair_pending(s)) die('busy: Node configuration repair is pending');
 		if (cluster_busy(s)) die('busy: Node recovery commands are pending');
 		validate_control_vlan(s.intent, intent);
-		if (s.intent && !equal(s.intent.backhaul, intent.backhaul) && maintenance !== true)
+		// Re-enabling an existing wired fallback preserves every wireless setting.
+		// It must remain possible while an AP is using only its wireless path.
+		let recovery = wireless_auto_recovery(s.intent, intent);
+		if (s.intent && !equal(s.intent.backhaul, intent.backhaul) && maintenance !== true && !recovery)
 			die(
 				'maintenance_required: Backhaul channel or credentials require coordinated wired maintenance'
 			);
@@ -147,7 +159,7 @@ export function cluster_service(io, pairing) {
 			boot: io.boot(),
 			deadline: io.now() + 300,
 			created: time(),
-			maintenance: maintenance === true,
+			maintenance: maintenance === true && !recovery,
 			root: { status: 'ready', plan, intent: local },
 			nodes: {}
 		};
@@ -179,6 +191,9 @@ export function cluster_service(io, pairing) {
 			if (!equal(a.nodes[node_id].control, lease_for(s, node_id)))
 				die('preview_changed: Controller control address lease changed');
 		validate_control_vlan(s.intent, a.intent);
+		if (s.intent && !equal(s.intent.backhaul, a.intent.backhaul) && !a.maintenance &&
+			!wireless_auto_recovery(s.intent, a.intent))
+			die('preview_changed: Controller backhaul intent changed');
 		if (
 			a.maintenance &&
 			length(filter(keys(a.nodes), (id) => {

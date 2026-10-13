@@ -396,13 +396,14 @@ function unifiedForm(data,c,refresh,writable,page) {
 		var path={mode:backhaul.value};
 		if(b.control_vlan!=null)path.control_vlan=b.control_vlan;
 		if(path.mode!=='wired')Object.assign(path,{mesh_id:meshid.value,
-			key:meshkey.value || (current.backhaul && b.mode===path.mode ? null : (requestId()+requestId()).slice(0,48)),
+			key:meshkey.value || (current.backhaul && (b.mode===path.mode ||
+				['auto','wireless'].indexOf(b.mode)>=0) ? null : (requestId()+requestId()).slice(0,48)),
 			channel:Number(channel.value),htmode:width.value});
 		var roaming={k:k.checked,v:v.checked,r:ft.checked,steering:steer.checked,domain:domain.value};
 		if(customPolicy.checked) {
 			roaming.policy={};Object.keys(thresholds).forEach(function(name) { roaming.policy[name]=Number(thresholds[name].value); });
 		}
-		return {schema:2,name:c.identity.name || 'Mesh',wifi:{enabled:enabled.checked,ssid:ssid.value,encryption:enc.value,key:key.value || null,
+		return {schema:2,name:current.name || c.identity.name || 'Mesh',wifi:{enabled:enabled.checked,ssid:ssid.value,encryption:enc.value,key:key.value || null,
 			roaming:roaming},backhaul:path,networks:current.networks || []};
 	}
 	function needsMaintenance(path) {
@@ -438,7 +439,7 @@ function unifiedForm(data,c,refresh,writable,page) {
 		field(_('Custom roaming thresholds'),customPolicy,_('Leave disabled to use the recommended policy. Changes apply to all nodes through a reviewed transaction. Association rejection and forced disconnection remain disabled.'))
 	] : [
 		field(_('Mesh ID'),meshid,_('802.11s backhaul identifier, separate from the client SSID. All managed backhaul radios must use the same identifier.')),
-		field(_('Independent SAE passphrase'),meshkey,_('Leave empty to keep the existing same-mode backhaul secret. A new wireless backhaul or a mode change generates an independent random secret automatically.')),
+		field(_('Independent SAE passphrase'),meshkey,_('Leave empty to keep the existing wireless backhaul secret, including when switching between wireless and wired preferred modes. A new wireless backhaul generates an independent random secret automatically.')),
 		field(_('Backhaul channel'),channel,_('A shared fixed channel for the selected backhaul band. Regulatory limits and DFS waiting periods still apply.')),
 		field(_('Channel width'),width,_('All backhaul radios must support this width; a higher width does not guarantee higher throughput.'))
 	];
