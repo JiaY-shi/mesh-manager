@@ -165,6 +165,16 @@ function configurationError(error) {
 		return _('The selected radio capabilities could not be verified. Retry the preview before applying.');
 	if (code === 'radio_width_unsupported')
 		return _('The selected radio does not support the requested backhaul width. Choose a width supported by every node.');
+	if (code === 'radio_channel_unknown')
+		return _('The selected radio channels could not be verified. Retry the preview before applying.');
+	if (code === 'radio_channel_unsupported')
+		return _('The selected radio does not support the requested backhaul channel. Choose a channel supported by every node.');
+	if (code === 'invalid_override' && error.message === 'Bridge gateway must be a unicast IPv4 address')
+		return _('The bridge gateway must be a valid unicast IPv4 address.');
+	if (code === 'preflight_failed')
+		return _('The controller configuration failed preflight. Check the input and radio settings.');
+	if (code === 'unsupported_operation' && error.message === 'Coordinated control VLAN migration is not implemented')
+		return _('Coordinated control VLAN migration is not implemented. Preserve the current control VLAN.');
 	if (code === 'wireless_control_incompatible')
 		return _('The installed Wi-Fi components incorrectly reject interface activation. Update or repair the firmware components before joining; extending the timeout will not help.');
 	if (code === 'controller_address_unsupported')

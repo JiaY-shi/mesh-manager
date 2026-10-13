@@ -975,6 +975,21 @@ msgstr "留空保留已有无线回程密码，包括在无线与有线优先模
 msgid "Save & Apply"
 msgstr "保存并应用"
 
+msgid "The selected radio channels could not be verified. Retry the preview before applying."
+msgstr "无法核实所选射频支持的信道，请重新预览后再应用。"
+
+msgid "The selected radio does not support the requested backhaul channel. Choose a channel supported by every node."
+msgstr "所选射频不支持该回程信道，请选择所有节点均支持的信道。"
+
+msgid "The bridge gateway must be a valid unicast IPv4 address."
+msgstr "桥接网关必须是有效的单播 IPv4 地址。"
+
+msgid "The controller configuration failed preflight. Check the input and radio settings."
+msgstr "主节点配置预检失败，请检查输入和射频设置。"
+
+msgid "Coordinated control VLAN migration is not implemented. Preserve the current control VLAN."
+msgstr "暂不支持在线迁移控制 VLAN，请保留当前控制 VLAN。"
+
 msgid "Reset"
 msgstr "重置"
 
