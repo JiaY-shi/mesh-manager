@@ -261,6 +261,17 @@ export function compile_extended(i, snapshot, cap, owned, legacy, resume_steerin
 			message: 'Legacy mesh is disabled and retained for release'
 		});
 	}
+	let bridge = filter(keys(snapshot.network), (k) =>
+		snapshot.network[k].type == 'device' &&
+		snapshot.network[k].values.name == snapshot.network.lan?.values.device)[0];
+	let prior_ports = filter(owned || [], (op) => op.config == 'network' &&
+		op.section == bridge && op.option == 'ports' &&
+		equal(snapshot.network[bridge]?.values.ports ?? null, op.after))[0];
+	let ports = port_tokens(prior_ports ? prior_ports.before :
+		snapshot.network[bridge]?.values.ports) || [];
+	// Restore the owned physical-port baseline for topology validation and
+	// selecting a different uplink. The live value remains the CAS input.
+	if (prior_ports && length(ports)) virtual.network[bridge].values.ports = clone(ports);
 	let base = clone(i);
 	base.schema = 1;
 	base.backhaul = 'wired';
@@ -300,14 +311,6 @@ export function compile_extended(i, snapshot, cap, owned, legacy, resume_steerin
 	let steering = steering_plan(i, snapshot, cap, owned, resume_steering);
 	errors = [...errors, ...steering.errors]; extra = [...extra, ...steering.ops];
 	conflicts = [...conflicts, ...steering.conflicts];
-	let bridge = filter(
-		keys(snapshot.network),
-		(k) =>
-			snapshot.network[k].type == 'device' &&
-			snapshot.network[k].values.name == snapshot.network.lan?.values.device
-	)[0];
-	let ports = snapshot.network[bridge]?.values.ports;
-	ports = port_tokens(ports) || [];
 	let vid = b.control_vlan || 4094,
 		addresses = i.control || control_addresses(
 			replace(substr(i.local.mac, 3), /:/g, '') + '0000000000000000000000'
@@ -473,7 +476,10 @@ export function compile_extended(i, snapshot, cap, owned, legacy, resume_steerin
 				fail('uplink_conflict', 'Selected AP uplink is not in LAN or standard WAN');
 			ports = filter(ports, (p) => p != uplink && p != 'mm-mesh0');
 			if (b.mode == 'wired') push(ports, uplink);
-			field('network', bridge, 'ports', uniq(ports), 'single active data path');
+			// UCI cannot store an empty list. A bridge with only the selected
+			// uplink has no static data ports while wireless backhaul is active.
+			field('network', bridge, 'ports', length(ports) ? uniq(ports) : null,
+				'single active data path');
 			if (b.mode != 'wired')
 				section(
 					'network',
