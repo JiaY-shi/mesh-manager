@@ -238,10 +238,12 @@ export function backhaul_tick() {
 	};
 	let trial = wired_trial_window(prior, carrier, now, mode, active),
 		trial_result = null, trial_error = null, trial_changed = false;
-	if (!wired && trial.eligible && !(mode == 'auto' && active == 'wireless' && wireless)) {
+	if (!wired && trial.eligible) {
 		// Tagged control VLANs are not bidirectional on every DSA port. The
 		// management probe runs only after the old data path is detached and
-		// STP has admitted the new bridge port.
+		// STP has admitted the new bridge port. A healthy wireless path must
+		// not suppress this bounded trial after the stable-carrier hold;
+		// otherwise an AP on such a port can never recover wired backhaul.
 		try {
 			trial_changed = reconcile(io, 'wired', bridge, links);
 			if (!wait_forwarding(links.wired, bridge))
