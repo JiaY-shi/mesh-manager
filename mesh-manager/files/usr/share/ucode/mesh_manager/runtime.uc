@@ -207,7 +207,8 @@ export function capabilities(snapshot, cached) {
 				channel: snapshot.wireless[k].values.channel || 'auto',
 				country: snapshot.wireless[k].values.country || null
 			})
-		), cached, name => call(b, 'iwinfo', 'info', { device: name })),
+		), cached, name => call(b, 'iwinfo', 'info', { device: name }),
+			name => call(b, 'iwinfo', 'freqlist', { device: name })),
 		backhaul_modes: wireless_ready ? ['wired', 'wireless', 'auto'] : ['wired'],
 		wireless_backhaul: sae==null || mesh==null ? 'unconfirmed' : wireless_ready ? 'preflight_required' : 'dependency_missing',
 		roaming: 'configuration_supported',

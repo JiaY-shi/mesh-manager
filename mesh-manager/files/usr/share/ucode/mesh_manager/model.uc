@@ -48,8 +48,10 @@ export function public_op(op) {
 	return result;
 }
 
-function ipv4(value) {
-	if (type(value) != 'string' || !match(value, /^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$/)) return false;
+export function ipv4(value) {
+	if (type(value) != 'string') return false;
+	let parsed = match(value, /^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$/);
+	if (!parsed || parsed[0] != value) return false;
 	let parts = split(value, '.');
 	return !length(
 		filter(parts, (p) => length(p) > 3 || int(p) > 255 || (length(p) > 1 && substr(p, 0, 1) == '0'))

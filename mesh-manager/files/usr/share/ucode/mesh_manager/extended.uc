@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 'use strict';
-import { clone, equal, validate, valid_text } from './model.uc';
+import { clone, equal, validate, valid_text, ipv4 } from './model.uc';
 import { control_addresses } from './backhaul.uc';
 import { require_lease } from './control_lease.uc';
 import { port_tokens, uplink_conflicts } from './topology.uc';
@@ -72,6 +72,12 @@ export function validate_overrides(local) {
 		index(['dhcp', 'static'], local.management.protocol) < 0
 	)
 		die('invalid_override: Invalid management override');
+	if (local.gateway != null && (type(local.gateway) != 'string' ||
+		local.gateway != '' && (!ipv4(local.gateway) ||
+			int(split(local.gateway, '.')[0]) == 0 ||
+			int(split(local.gateway, '.')[0]) == 127 ||
+			int(split(local.gateway, '.')[0]) >= 224)))
+		die('invalid_override: Bridge gateway must be a unicast IPv4 address');
 	if (
 		local.peers != null &&
 		(type(local.peers) != 'array' ||
@@ -499,9 +505,13 @@ export function compile_extended(i, snapshot, cap, owned, legacy, resume_steerin
 		if (snapshot.wireless[radio]?.type != 'wifi-device')
 			fail('unknown_radio', 'Mesh radio not present');
 		else {
-			let mode = backhaul_mode(cap.radios, radio, b.htmode);
+			let mode = backhaul_mode(cap.radios, radio, b.htmode, b.channel);
 			if (mode.error == 'radio_capability_unknown')
 				fail(mode.error, 'Selected radio capabilities are unknown; retry the preflight');
+			else if (mode.error == 'radio_channel_unknown')
+				fail(mode.error, 'Selected radio channels are unknown; retry the preflight');
+			else if (mode.error == 'radio_channel_unsupported')
+				fail(mode.error, 'Selected radio does not support the requested backhaul channel');
 			else if (mode.error)
 				fail(mode.error, 'Selected radio does not support the requested backhaul width');
 			else {
