@@ -11,6 +11,12 @@ import { lifecycle_service, lifecycle_busy } from './lifecycle.uc';
 import { handoff_receipt } from './handoff_controller.uc';
 import { restored_member } from './restoration.uc';
 
+function validate_control_vlan(before, after) {
+	// Neither batch ordering preserves isolated control during VLAN migration.
+	if (before && (before.backhaul?.control_vlan ?? 4094) != (after.backhaul?.control_vlan ?? 4094))
+		die('unsupported_operation: Coordinated control VLAN migration is not implemented');
+}
+
 export function public_active(a, plans) {
 	if (!a) return null;
 	let result = {
@@ -116,6 +122,7 @@ export function cluster_service(io, pairing) {
 			die('request_reused: Cluster request already completed');
 		if (repair_pending(s)) die('busy: Node configuration repair is pending');
 		if (cluster_busy(s)) die('busy: Node recovery commands are pending');
+		validate_control_vlan(s.intent, intent);
 		if (s.intent && !equal(s.intent.backhaul, intent.backhaul) && maintenance !== true)
 			die(
 				'maintenance_required: Backhaul channel or credentials require coordinated wired maintenance'
@@ -171,6 +178,7 @@ export function cluster_service(io, pairing) {
 		for (let node_id in keys(a.nodes))
 			if (!equal(a.nodes[node_id].control, lease_for(s, node_id)))
 				die('preview_changed: Controller control address lease changed');
+		validate_control_vlan(s.intent, a.intent);
 		if (
 			a.maintenance &&
 			length(filter(keys(a.nodes), (id) => {
