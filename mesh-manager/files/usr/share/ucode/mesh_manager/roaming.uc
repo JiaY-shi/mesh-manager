@@ -35,7 +35,11 @@ export function steering_owned(owned) {
 export function steering_service_action(snapshot) {
 	let sections=filter(values(snapshot.usteer || {}),section=>section.type=='usteer');
 	if(length(sections)!=1)die('configuration_error: Exactly one usteer configuration is required');
-	return sections[0].values.enabled=='0' ? 'stop' : 'reload';
+	// reload sends set_config to the existing daemon. An unresponsive instance
+	// can keep both application and rollback waiting on the same ubus request.
+	// Restart the optional advisory service within the existing reload budget;
+	// health checks still verify the new instance's effective policy.
+	return sections[0].values.enabled=='0' ? 'stop' : 'restart';
 }
 export function steering_plan(intent, snapshot, cap, owned, resume_managed) {
 	let enabled = intent.wifi.roaming.steering, managed = steering_owned(owned), errors = [], ops = [], conflicts = [];
