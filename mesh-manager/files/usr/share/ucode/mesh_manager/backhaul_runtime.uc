@@ -9,6 +9,7 @@ import { active_backhaul_intent, block_wireless, wireless_guard, bridge_step, en
 import { probe_control, probe_management } from './peer_transport.uc';
 import * as durable from './durable.uc';
 import { reconcile_business } from './business_runtime.uc';
+import { physical_root, data_binding } from './authority.uc';
 
 const RUNTIME = '/var/run/mesh-manager-backhaul.json';
 const WIRELESS = 'mm-mesh0';
@@ -55,24 +56,28 @@ function peer_present(bus, mac) {
 	return mesh_peer_present(response, mac);
 }
 
-function peer_acl(identity, mesh_id) {
+function peer_acl(identity, intent) {
 	if (!fs.access('/sys/class/net/' + WIRELESS)) return;
 	let wanted = [];
-	if (identity.role == 'root') {
+	if (physical_root(identity,intent) && identity.role=='root') {
 		let cluster = durable.load('cluster.json');
 		for (let id in keys(cluster?.members || {})) {
 			if (!match(id, /^[0-9a-f]{32}$/))
 				die('corrupt_state: Invalid member identity');
 			if (cluster.members[id].authorized) push(wanted, mesh_mac(id));
 		}
-	} else if (identity.role == 'ap' && identity.binding) {
-		wanted = [mesh_mac(identity.binding.controller_id)];
+	} else if (physical_root(identity,intent)) {
+		let roster=durable.load('cluster.json');
+		wanted=[mesh_mac(identity.binding.controller_id),...map(filter(keys(roster?.members || {}),
+			id=>id!=identity.id && roster.members[id].authorized===true),mesh_mac)];
+	} else if (data_binding(identity)) {
+		wanted = [mesh_mac(data_binding(identity).controller_id)];
 	}
 	let bus = connect(null, 1);
 	if (!bus) die('peer_unavailable: wpa_supplicant control bus unavailable');
 	let error;
 	try {
-		if (!ensure_mesh_acl(bus, WIRELESS, mesh_id))
+		if (!ensure_mesh_acl(bus, WIRELESS, intent.backhaul.mesh_id))
 			die('mesh_acl_unavailable: Cannot enforce manual mesh peering');
 		for (let mac in mesh_stations(bus, WIRELESS)) {
 			if (index(wanted, mac) >= 0) continue;
@@ -157,8 +162,9 @@ function observation_binding(identity, journal, links, bridge, boot) {
 	let indexes = {};
 	for (let name in [bridge, links.wired, links.wireless, 'mm-cw', 'mm-cm'])
 		indexes[name] = int(trim(fs.readfile('/sys/class/net/' + name + '/ifindex') || '0'));
-	return { boot, indexes, id: identity.id, controller: identity.binding?.controller_id,
-		network: identity.binding?.network_id, fingerprint: identity.binding?.ca_fingerprint,
+	let gateway=data_binding(identity);
+	return { boot, indexes, id: identity.id, controller: gateway?.controller_id,
+		network: gateway?.network_id, fingerprint: gateway?.ca_fingerprint,
 		version: journal.version, transaction: journal.active?.id,
 		phase: journal.active?.status, mode: active_backhaul_intent(journal)?.intent.backhaul?.mode };
 }
@@ -189,15 +195,17 @@ export function backhaul_tick() {
 		state = active_backhaul_intent(journal);
 	if (!identity || !state) { fs.unlink(RUNTIME); return; }
 	let mode = state.intent.backhaul?.mode;
+	let physical=physical_root(identity,state.intent),gateway=data_binding(identity);
 	if (mode == 'wired') {
-		if (identity.role != 'ap' || !identity.binding) { fs.unlink(RUNTIME); return; }
+		if (physical) {write_status({boot:durable.boot(),mode,active:'gateway',wired:true,wireless:false,observed:time()});return;}
+		if (!gateway) { fs.unlink(RUNTIME); return; }
 		let bridge = configured_bridge(), links = current_links(state.intent, bridge),
 			boot = durable.boot(), now = durable.now(), binding = observation_binding(identity, journal, links, bridge, boot),
 			prior = continuing_observation(previous(boot), binding, now);
 		let carrier = trim(fs.readfile('/sys/class/net/' + links.wired + '/carrier') || '') == '1';
 		let attached = master(links.wired) == bridge;
-		let verified = carrier && attached ? authenticated_path(identity.binding,'mm-cw') : false;
-		if (carrier && attached && verified !== true) verified = authenticated_management(identity.binding);
+		let verified = carrier && attached ? authenticated_path(gateway,'mm-cw') : false;
+		if (carrier && attached && verified !== true) verified = authenticated_management(gateway);
 		let proof = path_proof(verified, prior?.wired_verified_at, now, carrier && attached);
 		business_paths(journal, state.intent, carrier && attached ? 'wired' : 'none');
 		write_status({boot,mode,binding,sampled_at:now,wired_verified_at:proof.at,
@@ -207,35 +215,35 @@ export function backhaul_tick() {
 	if (index(['wireless', 'auto'], mode) < 0)
 		die('invalid_mode: Unsupported backhaul mode');
 	let bridge = configured_bridge();
-	peer_acl(identity, state.intent.backhaul.mesh_id);
+	peer_acl(identity, state.intent);
 	let proof = wireless_proof(identity, journal);
 	if (proof) last_wireless = { ...proof, bridge };
 	// A candidate may need its new uplink to reach the controller for confirmation.
 	// The local watchdog restores the committed path if confirmation times out;
 	// reconcile() still detaches the old bridge path before attaching the new one.
-	if (identity.role == 'root') {
+	if (physical) {
 		let current = master(WIRELESS);
 		if (current && current != bridge)
 			die('ownership_conflict: Controller mesh belongs to another bridge');
 		if (!current) set_master(WIRELESS, bridge, bridge);
-		return;
+		write_status({boot:durable.boot(),mode,active:'gateway',wired:true,wireless:true,observed:time()});return;
 	}
-	if (identity.role != 'ap' || !identity.binding) return;
+	if (!gateway) return;
 	let links = current_links(state.intent, bridge), boot = durable.boot(), now = durable.now();
 	let binding = observation_binding(identity, journal, links, bridge, boot),
 		prior = continuing_observation(previous(boot), binding, now);
 	let carrier = trim(fs.readfile('/sys/class/net/' + links.wired + '/carrier') || '') == '1';
 	let active = master(links.wired) == bridge ? 'wired' :
 		master(WIRELESS) == bridge ? 'wireless' : 'none';
-	let wired_probe = carrier && authenticated_path(identity.binding, 'mm-cw');
+	let wired_probe = carrier && authenticated_path(gateway, 'mm-cw');
 	let management_probe = carrier && active == 'wired' && wired_probe !== true
-		? authenticated_management(identity.binding) : false;
+		? authenticated_management(gateway) : false;
 	let wired_result = !carrier ? false : wired_probe === true || management_probe === true ? true :
 		management_probe === null || wired_probe === null ? null : false,
 		wired_proof = path_proof(wired_result, prior?.wired_verified_at, now, active == 'wired'),
 		wired = wired_proof.usable;
 	let wireless_result = fs.access('/sys/class/net/' + WIRELESS) ?
-		authenticated_path(identity.binding, 'mm-cm') : false;
+		authenticated_path(gateway, 'mm-cm') : false;
 	let wireless_proof = path_proof(wireless_result, prior?.wireless_verified_at, now, active == 'wireless'),
 		wireless = wireless_proof.usable;
 	let io = {
@@ -257,7 +265,7 @@ export function backhaul_tick() {
 			if (!wait_forwarding(links.wired, bridge))
 				trial_error = 'bridge_not_forwarding';
 			else {
-				let verified = authenticated_management(identity.binding);
+				let verified = authenticated_management(gateway);
 				wired = verified === true;
 				wired_proof = path_proof(verified, null, now, false);
 				if (!wired) trial_error = verified === null

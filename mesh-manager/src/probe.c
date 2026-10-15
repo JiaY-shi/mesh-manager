@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-only
 #define _GNU_SOURCE
 #include <errno.h>
+#include <arpa/inet.h>
 #include <fcntl.h>
 #include <json-c/json.h>
 #include <openssl/evp.h>
@@ -160,6 +161,53 @@ static int key_matches(int directory, const char *id, const char *fingerprint)
 	return result;
 }
 
+static int certificate_matches(int directory, const char *fingerprint)
+{
+	size_t length;
+	char *pem = read_private(directory, "device.crt", &length), digest[65];
+	unsigned char hash[EVP_MAX_MD_SIZE];
+	unsigned int size = 0;
+	BIO *bio = pem ? BIO_new_mem_buf(pem, (int)length) : NULL;
+	X509 *cert = bio ? PEM_read_bio_X509(bio, NULL, NULL, NULL) : NULL;
+	int result = 0;
+	if (cert && X509_digest(cert, EVP_sha256(), hash, &size) && size == 32) {
+		for (size_t i = 0; i < 32; i++) sprintf(digest + i * 2, "%02x", hash[i]);
+		result = hex(fingerprint, 64) && !strcmp(digest, fingerprint);
+	}
+	X509_free(cert); BIO_free(bio); free(pem);
+	return result;
+}
+
+/* The retained data gateway can authenticate paths after controller migration.
+ * Its exact new-controller binding owns the roster; it holds no CA signing key.
+ * This exception permits only the native four-field read-only probe below. */
+static int anchored_gateway(int directory, json_object *identity, json_object *cluster, const char *id)
+{
+	json_object *anchor = field(identity, "anchor"), *binding = field(identity, "binding");
+	const char *gateway = text(anchor, "gateway"), *address = text(anchor, "address");
+	struct in_addr ipv4;
+	struct stat st;
+	if (!json_object_is_type(anchor, json_type_object) || json_object_object_length(anchor) != 5 ||
+	    !text(anchor, "id") || strcmp(text(anchor, "id"), id) || !address ||
+	    inet_pton(AF_INET, address, &ipv4) != 1 || !text(anchor, "control_address") ||
+	    strcmp(text(anchor, "control_address"), "169.254.254.1") ||
+	    !gateway || (strcmp(gateway, "router") && strcmp(gateway, "bridge")) ||
+	    !certificate_matches(directory, text(anchor, "certificate"))) return 0;
+	uint32_t ip = ntohl(ipv4.s_addr);
+	if ((ip >> 24) != 10 && (ip >> 20) != 0xac1 && (ip >> 16) != 0xc0a8) return 0;
+	if (!json_object_is_type(binding, json_type_object) ||
+	    !json_object_equal(binding, field(cluster, "roster_authority")) ||
+	    !hex(text(binding, "controller_id"), 32) || !strcmp(text(binding, "controller_id"), id) ||
+	    !hex(text(binding, "controller_certificate"), 64) || !hex(text(binding, "ca_fingerprint"), 64) ||
+	    !text(binding, "network_id") || !text(identity, "network_id") ||
+	    strcmp(text(binding, "network_id"), text(identity, "network_id")) ||
+	    !json_object_is_type(field(identity, "authority_epoch"), json_type_int) ||
+	    json_object_get_int64(field(identity, "authority_epoch")) < 2 ||
+	    !json_object_equal(field(identity, "authority_epoch"), field(binding, "epoch"))) return 0;
+	if (!fstatat(directory, "network-ca.key", &st, AT_SYMLINK_NOFOLLOW) || errno != ENOENT) return 0;
+	return 1;
+}
+
 /* Called only after TLS client verification and reception of a probe frame.
  * No state writes, subprocesses, cached authorization or business dispatch here. */
 int mesh_probe(const char *peer, const char *controller, const char *certificate, unsigned char *buffer, size_t *length, size_t capacity)
@@ -189,7 +237,8 @@ int mesh_probe(const char *peer, const char *controller, const char *certificate
 	    !key_matches(directory, id, fingerprint))
 		goto done;
 	error = "not_controller";
-	if (!text(identity, "role") || strcmp(text(identity, "role"), "root"))
+	if (!text(identity, "role") || (strcmp(text(identity, "role"), "root") &&
+	    (strcmp(text(identity, "role"), "ap") || !anchored_gateway(directory, identity, cluster, id))))
 		goto done;
 	error = "corrupt_state";
 	network = text(identity, "network_id"); members = field(cluster, "members");

@@ -7,7 +7,7 @@ import { restored_member } from './restoration.uc';
 export function control_ingress(root, state, id, request, destination, boot, now) {
 	let member=state?.members?.[id], action=request?.action;
 	if (root?.role!='root' || type(destination)!='string' ||
-		index([root.address,'169.254.254.1'],destination)<0)
+		index([root.address,root.control_address || '169.254.254.1'],destination)<0)
 		die('invalid_transport: Controller listener identity is unavailable');
 	if (member?.authorized!==true) {
 		if (member?.authorized===false && type(member.removed)=='int' &&
@@ -19,7 +19,7 @@ export function control_ingress(root, state, id, request, destination, boot, now
 		index(['poll','probe','repair_intent','repair_reserve','repair_abort','repair_check',
 			'mesh_intent','mesh_reserve','mesh_abort','mesh_check','handoff_check','standby_hint'],action)<0)
 		die('invalid_request: Invalid node protocol');
-	if (destination=='169.254.254.1') return {pin:true};
+	if (destination==(root.control_address || '169.254.254.1')) return {pin:true};
 	// Read-only, signed Root BSSIDs disclose no intent or credentials and never
 	// count as a health/restoration receipt. Legacy paused APs can learn the pin.
 	if(action=='standby_hint')return {};

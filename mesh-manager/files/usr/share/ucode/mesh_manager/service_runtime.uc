@@ -18,8 +18,19 @@ export function service_desired() {
 	let identity,state,cluster;
 	try{identity=load('identity.json');state=load('state.json');if(identity?.role=='root')cluster=load('cluster.json');}
 	catch(e){return service_policy({schema:-1},null,true,demand);}
-	return service_policy(identity,state,
+	let result = service_policy(identity,state,
 		fs.lstat('/var/run/mesh-manager-onboard')!=null || fs.lstat('/sys/class/net/mm-onboard')!=null,demand,cluster);
+	result.listeners={};
+	for(let name in ['node','enroll','control']) {
+		if(index(result.instances,name)<0)continue;
+		let address=name=='control' ? identity?.role=='root' ? identity.control_address || '169.254.254.1' :
+			identity?.anchor!=null && identity.id!=null && identity.anchor.id==identity.id ? '169.254.254.1' :
+			identity?.migration!=null && identity.id!=null && identity.migration.target==identity.id ? identity.migration.binding?.control_address : identity.control_address :
+			identity?.role=='root' ? identity.address : identity.anchor?.address;
+		result.listeners[name]={address,port:name=='enroll'?37902:37901,mode:name=='enroll'?'enroll':'node'};
+	}
+
+	return result;
 }
 export function wake_service() {
 	if(!fs.access('/etc/init.d/mesh-manager'))return;
@@ -56,7 +67,10 @@ export function reconcile_services() {
 	if(type(actual)!='object')return;
 	let names=keys(actual);
 	if(length(names)==length(desired.instances) && !length(filter(names,n=>
-		index(desired.instances,n)<0 || actual[n].running!==true)))return;
+		index(desired.instances,n)<0 || actual[n].running!==true)) &&
+		!length(filter(keys(desired.listeners),name=>join(' ',actual[name]?.command || [])!=join(' ',[
+			'/usr/libexec/mesh-manager-channel','serve',desired.listeners[name].address,''+desired.listeners[name].port,
+			'/etc/mesh-manager/network-ca.crt','/etc/mesh-manager/device.crt','/etc/mesh-manager/device.key',desired.listeners[name].mode]))))return;
 	if(run(['/etc/init.d/mesh-manager','reload'],'',5000)?.code!==0)
 		die('service_error: Cannot reconcile Mesh background services');
 }

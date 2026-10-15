@@ -28,7 +28,8 @@
           "status_detail",
           "diagnostics",
           "discover",
-          "onboard_status"
+          "onboard_status",
+          "migration_status"
         ]
       }
     },
@@ -73,7 +74,11 @@
           "enrollment_stop",
           "local_overrides_preview",
           "local_overrides_stage",
-          "local_overrides_confirm"
+          "local_overrides_confirm",
+          "migration_preflight",
+          "migration_apply",
+          "migration_cancel",
+          "migration_resume"
         ],
         "mesh-manager.sync": [
           "repair_preview",

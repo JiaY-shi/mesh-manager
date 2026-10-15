@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-only
 'use strict';
 import * as crypto from 'mesh_crypto';
+import { private_address as private_ip } from './authority_model.uc';
 import { valid_text, public_enrollment, equal } from './model.uc';
 
 // Network I/O deliberately runs outside the journal lock. Check the complete
@@ -11,17 +12,7 @@ export function same_ap_binding(before, after) {
 		before.network_id == after.network_id && equal(before.binding, after.binding);
 }
 
-export function private_address(value) {
-	if (type(value) != 'string' || !match(value, /^[0-9]{1,3}(\.[0-9]{1,3}){3}$/)) return false;
-	let p = map(split(value, '.'), (item) => int(item));
-	return (
-		!length(filter(p, (n) => n < 0 || n > 255)) &&
-		(p[0] == 10 ||
-			(p[0] == 172 && p[1] >= 16 && p[1] <= 31) ||
-			(p[0] == 192 && p[1] == 168) ||
-			(p[0] == 169 && p[1] == 254))
-	);
-}
+export function private_address(value) { return private_ip(value); }
 export function public_identity(data, enrollment) {
 	if (!data) return { role: 'unbound' };
 	return {
@@ -33,6 +24,10 @@ export function public_identity(data, enrollment) {
 		name: data.name || null,
 		network_id: data.network_id || data.binding?.network_id || null,
 		controller_id: data.role == 'root' ? data.id : data.binding?.controller_id || null,
+		authority_epoch:data.authority_epoch || 1,
+		data_gateway:data.anchor ? {id:data.anchor.id,address:data.anchor.address,gateway:data.anchor.gateway} : null,
+		migration:data.migration ? {id:data.migration.id,phase:data.migration.phase,source:data.migration.source,
+			target:data.migration.target,address:data.migration.binding?.address || null} : null,
 		address: data.address || data.binding?.address || null,
 		joining: data.joining
 			? { request_id: data.joining.request_id, status: data.joining.status }

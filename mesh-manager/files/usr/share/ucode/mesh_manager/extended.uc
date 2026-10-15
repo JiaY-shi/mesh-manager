@@ -9,10 +9,14 @@ import { steering_plan, steering_policy_errors } from './roaming.uc';
 import { backhaul_mode } from './radio_modes.uc';
 import { network_errors, network_plan } from './network_extensions.uc';
 import { planning_errors, radio_plan, planning_radios } from './radio_planning.uc';
+import { valid_anchor, require_anchor } from './authority.uc';
 
 export const CONTROLLER_ADDRESS_MESSAGE = 'Coordinated controller address migration is not implemented; preserve the existing static LAN address';
-export function validate_controller_management(local, address, lan) {
+export function validate_controller_management(local, address, lan, identity) {
 	let management = local?.management;
+	if (identity?.role=='root' && valid_anchor(identity.anchor) && identity.id!=identity.anchor.id &&
+		identity.gateway=='bridge' && private_address(address) && management?.interface=='lan' && management.protocol=='dhcp' &&
+		(lan==null || lan.proto=='dhcp')) return true;
 	if (!private_address(address) || management?.interface != 'lan' ||
 		management.protocol != 'static' || management.address != address)
 		die('controller_address_unsupported: ' + CONTROLLER_ADDRESS_MESSAGE);
@@ -93,18 +97,39 @@ export function validate_overrides(local) {
 		die('invalid_override: Explicit legacy mesh takeover choice required');
 	return true;
 }
-export function local_intent(unified, local, controller, gateway, id, control) {
+export function local_intent(unified, local, controller, gateway, id, control, anchor) {
 	validate_overrides(local);
+	let physical=anchor==null ? controller : require_anchor(anchor).id==id;
 	return {
 		...clone(unified),
-		controller,
-		gateway,
+		controller:physical,
+		gateway:anchor==null ? gateway : physical ? anchor.gateway : 'bridge',
+		...(anchor==null ? {} : {manager:controller,anchor:clone(anchor)}),
 		name: local.name || unified.name,
 		management: clone(local.management),
 		wifi: { ...clone(unified.wifi), radios: clone(local.radios) },
 		local: { ...clone(local), mac: mesh_mac(id) },
-		...(control == null ? {} : { control: require_lease(control) })
+		...(physical && anchor!=null || control == null ? {} : { control: require_lease(control) })
 	};
+}
+export function controller_intent(unified, local, identity, state) {
+	let peers=identity.anchor && identity.id!=identity.anchor.id ? [mesh_mac(identity.anchor.id)] :
+		map(filter(keys(state.members || {}),id=>state.members[id].authorized),mesh_mac);
+	return local_intent(unified,{...local,peers},true,identity.gateway,identity.id,identity.control,identity.anchor);
+}
+export function peer_context(root, state, id) {
+	return {root_mac:mesh_mac(root.anchor?.id || root.id),anchor:clone(root.anchor || null),
+		anchor_peers:root.anchor?.id==id ? map([root.id,...filter(keys(state.members || {}),
+			n=>n!=id && state.members[n].authorized)],mesh_mac) : null};
+}
+export function node_peers(id, context) {
+	if(context.anchor?.id==id) {
+		if(type(context.anchor_peers)!='array' || length(context.anchor_peers)>64 ||
+			index(context.anchor_peers,mesh_mac(id))>=0)
+			die('protocol_error: Data gateway peer inventory is invalid');
+		return clone(context.anchor_peers);
+	}
+	return [context.root_mac];
 }
 export function validate_extended(i) {
 	let errors = [];
@@ -125,7 +150,7 @@ export function validate_extended(i) {
 					'wifi',
 					'local',
 					'control',
-					'networks'
+					'networks', 'manager', 'anchor'
 				],
 				k
 			) < 0
@@ -137,6 +162,8 @@ export function validate_extended(i) {
 	delete base.local;
 	delete base.control;
 	delete base.networks;
+	delete base.manager;
+	delete base.anchor;
 	delete base.wifi?.roaming;
 	delete base.wifi?.planning;
 	errors = [...errors, ...validate(base)];
@@ -149,6 +176,8 @@ export function validate_extended(i) {
 		try { require_lease(i.control); if (i.controller) error('Controller cannot use an AP control lease'); }
 		catch (e) { error('Invalid controller-assigned control addresses'); }
 	}
+	if (i.anchor!=null && (!valid_anchor(i.anchor) || type(i.manager)!='bool')) error('Invalid data gateway anchor');
+	if (i.manager!=null && (type(i.manager)!='bool' || !valid_anchor(i.anchor))) error('Invalid management controller role');
 	let b = i.backhaul,
 		r = i.wifi?.roaming;
 	if (type(b) != 'object' || index(['wired', 'wireless', 'auto', 'batman'], b.mode) < 0)
@@ -200,6 +229,15 @@ export function compile_extended(i, snapshot, cap, owned, legacy, resume_steerin
 		push(errors, { code, message });
 	}
 	if (length(errors)) return { errors, ops: [], conflicts, warnings };
+	if (i.anchor!=null) {
+		let identity=cap.controller_identity, trusted=identity?.anchor || identity?.migration?.anchor;
+		if (trusted==null && identity?.role=='root' && i.anchor.id==identity.id &&
+			i.anchor.address==identity.address && i.anchor.gateway==identity.gateway) trusted=i.anchor;
+		if (!equal(i.anchor,trusted) || i.controller!==(i.anchor.id==identity?.id) ||
+			i.manager===true && identity?.role!='root' && identity?.migration?.target!=identity?.id)
+			fail('migration_conflict','Local topology must match the trusted data gateway and controller role');
+		if (length(errors)) return {errors,ops:[],conflicts,warnings};
+	}
 	// Store the reviewed policy, while compiling only its selected client bands.
 	let selected_intent = clone(i);
 	selected_intent.wifi.radios = planning_radios(i, cap);
@@ -289,6 +327,8 @@ export function compile_extended(i, snapshot, cap, owned, legacy, resume_steerin
 	base.backhaul = 'wired';
 	delete base.local;
 	delete base.networks;
+	delete base.manager;
+	delete base.anchor;
 	delete base.wifi.roaming;
 	delete base.wifi.planning;
 	delete base.control;
@@ -428,7 +468,7 @@ export function compile_extended(i, snapshot, cap, owned, legacy, resume_steerin
 		},
 		'isolated management control zone'
 	);
-	if (i.controller)
+	if (i.controller || i.manager===true || cap.controller_identity?.role=='root')
 		section(
 			'firewall',
 			'mm_control_tls',
@@ -442,6 +482,12 @@ export function compile_extended(i, snapshot, cap, owned, legacy, resume_steerin
 			},
 			'mutually authenticated control only'
 		);
+	else if (snapshot.firewall.mm_control_tls) {
+		let owner=filter(owned || [],o=>o.config=='firewall' && o.section=='mm_control_tls' && o.option==null)[0];
+		if (!owner || !equal(snapshot.firewall.mm_control_tls,owner.after))
+			fail('ownership_conflict','Controller listener firewall rule changed before retirement');
+		else section('firewall','mm_control_tls','rule',null,'retire former controller listener');
+	}
 	if (r.steering || length(filter(owned || [], op => op.config=='firewall' && op.section=='mm_usteer')))
 		section('firewall','mm_usteer','rule',r.steering ? {
 			name:'Mesh Manager roaming coordination',src:'mm_control',proto:'udp',dest_port:'16720',family:'ipv4',target:'ACCEPT'
@@ -591,8 +637,9 @@ export function compile_extended(i, snapshot, cap, owned, legacy, resume_steerin
 			if (snapshot.network[name])
 				section('network', name, 'interface', null, 'remove obsolete mesh link');
 	}
-	// Restore the first takeover values when a radio no longer carries backhaul.
-	{
+	// Restore a radio that no longer carries backhaul, including band/radio
+	// switches that keep wireless backup enabled. Metadata handover preserves RF.
+	if (cap.migration_metadata !== true) {
 		for (let owner in owned || []) {
 			if (owner.config != 'wireless' ||
 				!(owner.option == 'channel' && owner.reason == 'coordinated backhaul channel' ||

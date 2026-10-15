@@ -2,7 +2,8 @@
 'use strict';
 import { history_used } from './history_retention.uc';
 import { clone, equal } from './model.uc';
-import { mesh_mac } from './extended.uc';
+import { peer_context } from './extended.uc';
+import { require_gateway_retained } from './authority.uc';
 import { adopt_leases, lease_for } from './control_lease.uc';
 import { record_restoration, restored_member, fresh_restoration, shutdown_guard } from './restoration.uc';
 
@@ -55,12 +56,13 @@ export function lifecycle_service(io, pairing) {
 		let s = pairing.state();
 		node.command = { id: job.id + '-' + action, transaction: job.id, action,
 			mesh_enabled: job.enabled === true, version: s.version,
-			intent: job.enabled === true ? clone(s.intent) : null, root_mac: mesh_mac(pairing.root().id),
+			intent: job.enabled === true ? clone(s.intent) : null, ...peer_context(pairing.root(),s,job.node_id),
 			control: job.enabled === true ? node.control : null, bootstrap:io.bootstrap_wifi?.() || [],
 			approval: action == 'mesh_apply' ? node.plan : null };
 	}
 	function all_disabled(s, require_fresh) {
 		let root=pairing.root();
+		require_gateway_retained(root,root.anchor?.id);
 		for (let m in values(s.members)) {
 			if (type(m.authorized) != 'bool')
 				die('ap_restore_unverified: Retained AP authorization and restoration state are unknown');
@@ -118,6 +120,7 @@ export function lifecycle_service(io, pairing) {
 	}
 	function node_prepare(node_id, enabled, id) {
 		pairing.root(); validate(id);
+		if(enabled===false)require_gateway_retained(pairing.root(),node_id);
 		if (type(enabled) != 'bool') die('invalid_request: Invalid Mesh target state');
 		let s = pairing.state(), m = s.members[node_id];
 		if (!m?.authorized) die('not_authorized: Node is not authorized');
@@ -250,6 +253,7 @@ export function lifecycle_service(io, pairing) {
 			die('busy: A configuration operation is pending');
 		if (!s.intent || io.local.repair_status?.()?.paused === true)
 			die('mesh_disabled: Controller Mesh is disabled');
+		if(r.enabled===false)require_gateway_retained(root,id);
 		let control = r.enabled === true ? lease_for(s, id) : null;
 		if (r.action == 'mesh_reserve') {
 			validate(r.request_id);
@@ -262,7 +266,7 @@ export function lifecycle_service(io, pairing) {
 			} else if (m.mesh_mode.enabled !== (r.enabled === true) || !equal(m.mesh_mode.control, control))
 				die('request_reused: Mesh target changed');
 		}
-		return { intent: clone(s.intent), version: s.version, root_mac: mesh_mac(root.id), control,
+		return { intent: clone(s.intent), version: s.version, ...peer_context(root,s,id), control,
 			bootstrap:io.bootstrap_wifi?.() || [] };
 	}
 	function confirm(id) {

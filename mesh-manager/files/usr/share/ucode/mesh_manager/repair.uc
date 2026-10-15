@@ -4,7 +4,7 @@ import { history_used } from './history_retention.uc';
 import { effective_settings } from './local_settings.uc';
 import * as crypto from 'mesh_crypto';
 import { clone, equal } from './model.uc';
-import { mesh_mac, local_intent } from './extended.uc';
+import { controller_intent, peer_context } from './extended.uc';
 import { lifecycle_busy } from './lifecycle.uc';
 import { adopt_leases, lease_for } from './control_lease.uc';
 
@@ -50,7 +50,7 @@ export function repair_service(io, pairing) {
 		if (cluster_busy(s) || repair_pending(s)) die('busy: A cluster operation is pending');
 		if (!s.intent) die('not_managed: Controller has no confirmed network intent');
 		if (io.local.repair_status?.()?.paused === true) die('mesh_disabled: Controller Mesh is disabled');
-		return { intent: local_intent(s.intent, effective_settings(root, io.load('state.json')), true, root.gateway, root.id), version: s.version };
+		return { intent: controller_intent(s.intent, effective_settings(root, io.load('state.json')), root, s), version: s.version };
 	}
 	function local_preview() {
 		let target = controller_target();
@@ -84,12 +84,13 @@ export function repair_service(io, pairing) {
 		if (length(s.repair_history) > 32) shift(s.repair_history);
 	}
 	function command(job, action) {
+		let s=pairing.state(),node_id=filter(keys(s.members),id=>s.members[id].repair?.id==job.id)[0];
 		job.command = { id: job.id + '-' + action, transaction: job.id, action,
 			version: job.version,
 			intent: index(['repair_prepare', 'repair_apply'], action) >= 0 ? job.intent : null,
 			approval: action == 'repair_apply' ? job.plan : null,
 			control: job.control,
-			root_mac: mesh_mac(pairing.root().id) };
+			...peer_context(pairing.root(),s,node_id) };
 	}
 	function enqueue(node_id, id) {
 		pairing.root(); validate(id);
@@ -114,7 +115,7 @@ export function repair_service(io, pairing) {
 		member(s, id);
 		if (cluster_busy(s) || controller_repair_busy(io)) die('busy: A cluster transaction is active');
 		if (!s.intent) die('not_managed: Controller has no confirmed network intent');
-		return { intent: clone(s.intent), version: s.version, root_mac: mesh_mac(pairing.root().id), control: lease_for(s, id) };
+		return { intent: clone(s.intent), version: s.version, ...peer_context(pairing.root(),s,id), control: lease_for(s, id) };
 	}
 	function reserve(s, node_id, id, version, purpose) {
 		purpose ||= 'repair';
@@ -128,7 +129,7 @@ export function repair_service(io, pairing) {
 			if (job.boot != io.boot() || io.now() >= job.deadline)
 				die('preview_changed: Controller repair reservation expired');
 			if (!equal(job.control, target.control)) die('preview_changed: Controller control address lease changed');
-			return { intent: clone(job.intent), version: job.version, root_mac: target.root_mac, control: clone(job.control) };
+			return { ...target, intent: clone(job.intent), version: job.version, control: clone(job.control) };
 		}
 		if (job && index(TERMINAL, job.status) < 0)
 			die('busy: A repair request is already pending for this node');

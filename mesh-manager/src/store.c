@@ -28,9 +28,10 @@ static const char *filename(int argc, char **argv, int *cas, ssize_t *expected_s
 	const char *name = NULL;
 	if (argc == 2)
 		name = argv[1];
-	else if (argc == 4 && !strcmp(argv[1], "--cas")) {
-		*cas = 1;
+	else if (argc == 4 && (!strcmp(argv[1], "--cas") || !strcmp(argv[1], "--remove-cas"))) {
+		*cas = !strcmp(argv[1], "--remove-cas") ? 2 : 1;
 		name = argv[2];
+		if (*cas == 2 && strcmp(name, "network-ca.key")) return NULL;
 		if (!strcmp(argv[3], "-1"))
 			*expected_size = -1;
 		else {
@@ -155,6 +156,7 @@ int main(int argc, char **argv)
 	}
 	if (!same_directory(dir)) goto fail;
 	if (cas) {
+		if (cas == 2 && expected_size < 1) goto fail;
 		if (expected_size > 0) {
 			expected = malloc((size_t)expected_size);
 			if (!expected) goto fail;
@@ -168,6 +170,16 @@ int main(int argc, char **argv)
 		rc = compare(dir, target, expected, expected_size, NULL, &original);
 		if (rc) goto fail;
 		rc = 1;
+	}
+	if (cas == 2) {
+		/* Retire only the transferred signing key, with the directory writer
+		 * lock, original inode/bytes and durable directory deletion checked. */
+		if (read(STDIN_FILENO, buffer, 1) != 0 || !same_directory(dir)) goto fail;
+		rc = compare(dir, target, expected, expected_size, &original, NULL);
+		if (rc) goto fail;
+		rc = 1;
+		if (unlinkat(dir, target, 0) || fsync(dir)) goto fail;
+		rc = 0; goto fail;
 	}
 	if (!fstatat(dir, target, &st, AT_SYMLINK_NOFOLLOW) && !S_ISREG(st.st_mode))
 		goto fail;

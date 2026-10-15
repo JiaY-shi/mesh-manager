@@ -125,6 +125,12 @@
 :is(.mm-page, .mm-dialog) .mm-check-list { list-style: none; padding: 0; margin: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: 24px; }
 :is(.mm-page, .mm-dialog) .mm-check-list li { display: flex; justify-content: space-between; gap: 10px; padding: 6px 0; border-bottom: 1px solid var(--mm-border); }
 :is(.mm-page, .mm-dialog) .mm-check-list li > span:first-child { overflow-wrap: anywhere; }
+.mm-page .mm-cluster-list { display: block; list-style: none; padding: 0; margin: 0; }
+.mm-page .mm-cluster-item { display: block; padding: 8px 0; border-bottom: 1px solid var(--mm-border); }
+.mm-page .mm-cluster-name { display: block; overflow-wrap: anywhere; font-weight: 500; }
+.mm-page .mm-cluster-item > .mm-status { display: block; margin-top: 3px; }
+.mm-page .mm-migration .mm-facts { grid-template-columns: minmax(0, 1fr); }
+.mm-page .mm-migration .mm-section-content > * + * { margin-top: 8px; }
 :is(.mm-page, .mm-dialog) .mm-empty, :is(.mm-page, .mm-dialog) .mm-empty-state { color: var(--mm-muted); padding: 6px 0; margin: 0; font-size: 13px; }
 .mm-approval { display: flex; align-items: flex-start; gap: 6px; margin: 12px 0; }
 .mm-approval input { flex-shrink: 0; }

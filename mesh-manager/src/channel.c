@@ -325,7 +325,7 @@ static int serve(SSL_CTX *ctx, const struct sockaddr_in *addr, int enrollment)
 	}
 }
 
-static int client(SSL_CTX *ctx, const struct sockaddr_in *addr, const char *expected, const char *device, int probe)
+static int client(SSL_CTX *ctx, const struct sockaddr_in *addr, const char *expected, const char *device, const char *pin, int probe)
 {
 	int sock = -1, rc = 1;
 	SSL *ssl = NULL;
@@ -352,7 +352,8 @@ static int client(SSL_CTX *ctx, const struct sockaddr_in *addr, const char *expe
 		goto done;
 	SSL_set_fd(ssl, sock);
 	char certificate[65];
-	if (SSL_connect(ssl) != 1 || !peer_identity(ssl, identity, certificate) || strcmp(identity, expected))
+	if (SSL_connect(ssl) != 1 || !peer_identity(ssl, identity, certificate) || strcmp(identity, expected) ||
+	    (pin && strcmp(certificate, pin)))
 		goto done;
 	if (frame(ssl, buffer, &size, 1, &probe, 0) && frame(ssl, buffer, &size, 0, NULL, 0) && write_all(STDOUT_FILENO, buffer, size))
 		rc = 0;
@@ -422,18 +423,22 @@ int main(int argc, char **argv)
 		SSL_CTX_free(ctx);
 		return rc;
 	}
-	if ((argc != 8 && argc != 9) || (strcmp(argv[1], "serve") && strcmp(argv[1], "client") && strcmp(argv[1], "probe")) || !address(argv[2], argv[3], &addr))
+	if ((argc != 8 && argc != 9 && argc != 10) || (strcmp(argv[1], "serve") && strcmp(argv[1], "client") && strcmp(argv[1], "probe")) || !address(argv[2], argv[3], &addr))
 		return 2;
 	server = !strcmp(argv[1], "serve");
 	if (server && argc != 8)
 		return 2;
+	if (argc == 10) {
+		if (strlen(argv[9]) != 64 || strspn(argv[9], "0123456789abcdef") != 64) return 2;
+	}
 	enrollment = server && !strcmp(argv[7], "enroll");
 	if (server && strcmp(argv[7], "node") && !enrollment)
 		return 2;
 	ctx = context(argv[4], argv[5], argv[6], server, enrollment);
 	if (!ctx)
 		return 3;
-	rc = server ? serve(ctx, &addr, enrollment) : client(ctx, &addr, argv[7], argc == 9 ? argv[8] : NULL, !strcmp(argv[1], "probe"));
+	rc = server ? serve(ctx, &addr, enrollment) : client(ctx, &addr, argv[7],
+		argc >= 9 && strcmp(argv[8], "-") ? argv[8] : NULL, argc == 10 ? argv[9] : NULL, !strcmp(argv[1], "probe"));
 	SSL_CTX_free(ctx);
 	return rc;
 }

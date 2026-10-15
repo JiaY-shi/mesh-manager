@@ -7,7 +7,7 @@ import * as client_events from './client_events.uc';
 import { same_ap_binding } from './identity.uc';
 import { effective_settings } from './local_settings.uc';
 import { require_lease } from './control_lease.uc';
-import { local_intent } from './extended.uc';
+import { local_intent, node_peers, mesh_mac } from './extended.uc';
 import { clone, equal } from './model.uc';
 import { handoff_state } from './first_handoff.uc';
 import { handoff_context, handoff_poll_context, handoff_poll } from './handoff_runtime.uc';
@@ -20,11 +20,20 @@ import { departure_service } from './departure.uc';
 import { standby_bootstrap } from './standby.uc';
 import { agent_local } from './agent_local.uc';
 import { sanitize_report } from './agent_report.uc';
+import {migration_receipt} from './migration_model.uc';
+import {accept_anchor_roster} from './anchor_roster.uc';
 
 // Only AP behavior lives here. Root orchestration is loaded in another worker.
 // A long-lived AP retains the original bounded retry windows across ticks.
 let catchup_deferred = null;
 let standby_deferred = null;
+let migration_client;
+function migration() {
+	if (!migration_client) migration_client=require('mesh_manager.migration_client_worker')({
+		durable,local:agent_local,exchange,effective_settings,local_intent,mesh_mac
+	});
+	return migration_client;
+}
 
 function error_code(e) {
 	return match(e.message || '', /^([a-z_]{1,32}): /)?.[1] || 'internal_error';
@@ -41,8 +50,9 @@ export function agent_exchange(binding, request, context) {
 }
 
 function candidate(data, command, i) {
-	let local = { ...effective_settings(data, i.load('state.json')), peers: [command.root_mac] };
-	return local_intent(command.intent, local, false, 'bridge', data.id, require_lease(command.control));
+	let local = { ...effective_settings(data, i.load('state.json')), peers:
+		node_peers(data.id,command) };
+	return local_intent(command.intent, local, false, 'bridge', data.id, command.control ? require_lease(command.control) : null,data.anchor || command.anchor);
 }
 export function node_command(data, command, i, observed, handoff) {
 	let job = data.agent;
@@ -388,6 +398,9 @@ export function ap_agent_tick() {
 	}
 	if (data.departing) { onboard_standby_stop(); depart(); return; }
 	if (data.role != 'ap' || !data.binding) return;
+	if(data.migration && index(['complete','cancelled','expired'],data.migration.phase)<0) {
+		migration().tick();data=durable.load('identity.json');
+	}
 	let i = io(),
 		status = i.local.agent_status();
 	data = durable.locked(() => {
@@ -416,7 +429,7 @@ export function ap_agent_tick() {
 	catch (e) { observed = null; }
 	if (observed?.boot == durable.boot() && type(observed.observed) == 'int' &&
 		time() - observed.observed >= 0 && time() - observed.observed < 15 &&
-		index(['wired', 'wireless', 'none'], observed.active) >= 0)
+		index(['wired', 'wireless', 'none','gateway'], observed.active) >= 0)
 		backhaul = { ...backhaul, active: observed.active, carrier: observed.carrier,
 			wired: observed.wired, wireless: observed.wireless,
 			quality: status.local.backhaul?.quality || null };
@@ -431,9 +444,11 @@ export function ap_agent_tick() {
 		drift: status.drift,
 		health: status.health,
 		backhaul,
+		data_gateway:status.intent?.controller===true && data.anchor?.id==data.id,
 		clients: status.mesh_enabled ? status.local.clients : [],
 		clients_complete: status.mesh_enabled && status.local.clients_complete,
 		command: data.agent,
+		migration:migration_receipt(data.migration),
 		controller_recovery: status.controller_recovery,
 		transaction: status.active ? { id: status.active.id, request_id:status.active.request_id, kind: status.active.kind,
 			mesh_enabled: status.active.mesh_enabled, status: status.active.status,
@@ -468,6 +483,20 @@ export function ap_agent_tick() {
 		reply.network_id != data.binding.network_id
 	)
 		die('identity_error: Controller identity changed');
+	if(reply.anchor_roster!=null)durable.locked(()=>{
+		let current=durable.load('identity.json');
+		if(!same_ap_binding(data,current))die('identity_error: Gateway binding changed before roster update');
+		let cluster=durable.load('cluster.json');
+		if(accept_anchor_roster(current,cluster,reply.anchor_roster))durable.save('cluster.json',cluster);
+	});
+	if (match(reply.command?.action || '',/^migration_/)) {
+		// Migration samples fresh local state. Release the completed poll's
+		// capture before lazy compilation and its independent resource gate.
+		let command=reply.command;
+		status=null;report=null;request=null;
+		gc('collect');
+		migration().command(command);return;
+	}
 	if (reply.authorization?.status=='revoked') { onboard_standby_stop(); depart(reply); return; }
 	let catchup = data.agent?.catchup && data.agent.status == 'awaiting_confirm';
 	if (!reply.command && !catchup) return;

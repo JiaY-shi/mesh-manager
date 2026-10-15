@@ -77,6 +77,7 @@ function transactionAction(method, id) {
 	return operation.promise;
 }
 function loadStatus(view, attempt) {
+	if(view==='advanced')view='nodes';
 	return call('status', view === 'clients' ? 'clients_brief' : view, view === 'history' ? 'paged' : '').catch(function(error) {
 		if (attempt >= 12 || (error.code !== 'busy' &&
 			!/another request|request in progress|\bbusy\b/i.test(error.message || ''))) throw error;
@@ -300,6 +301,7 @@ function wizard(data, refresh, writable) {
 function content(page, data, refresh, writable) {
 	var result = [], cap = data.capabilities;
 	result = result.concat(cluster.summary(page, data, refresh, writable));
+	if(page==='advanced')return result;
 	if(['overview','diagnostics'].indexOf(page)>=0)result.push(diagnostics.attention(data,page==='diagnostics'));
 	if (!widgets.recoveryReady(cap) && (!data.attention || !data.mesh_enabled || ['overview','diagnostics'].indexOf(page)<0)) result.push(E('p', { 'class': 'alert-message warning' }, _('Recovery service unavailable. Configuration changes are blocked.')));
 	if(!data.active || data.active.kind!=='repair' || page==='nodes' || page==='history')result.push(transaction(data, refresh, writable,page));
@@ -562,7 +564,7 @@ return baseclass.extend({
 				renderStatus(data);
 				poll.add(refresh, 3);
 				return E('div', { 'class': 'mm-page', 'data-mm-view': page, 'aria-label': _('Mesh Manager') }, [
-					E('link', { rel: 'stylesheet', href: L.resource('mesh_manager/mesh-manager.css')+'?v=20261015-radio-1' }),
+					E('link', { rel: 'stylesheet', href: L.resource('mesh_manager/mesh-manager.css')+'?v=20261015-migration-1' }),
 					tabs ? E('span') : title,
 					tabs ? E('span') : description,
 					error, panel, forms

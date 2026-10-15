@@ -47,6 +47,11 @@ methods.cluster_apply = {
 	call: request => deferred_settings('cluster_apply', request)
 };
 methods.cluster_rollback = { args: { transaction_id: '' }, call: handler('cluster_rollback') };
+methods.migration_status = { call: handler('migration_status') };
+methods.migration_preflight = { args:{node_id:'',request_id:''},call:request=>deferred_settings('migration_preflight',request) };
+methods.migration_apply = { args:{request_id:'',approval:{},takeover:false},call:request=>deferred_settings('migration_apply',request) };
+for(let method in ['migration_cancel','migration_resume'])
+	methods[method]={args:{request_id:''},call:handler(method)};
 methods.local_overrides = {
 	args: { local: {}, takeover: false },
 	call: handler('local_overrides')

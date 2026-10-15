@@ -4,7 +4,7 @@ import { history_used, history_version } from './history_retention.uc';
 import { settings_identity } from './local_settings.uc';
 import * as crypto from 'mesh_crypto';
 import { clone, equal } from './model.uc';
-import { local_intent, mesh_mac, validate_controller_management } from './extended.uc';
+import { controller_intent, peer_context, mesh_mac, validate_controller_management } from './extended.uc';
 import { adopt_leases, lease_for } from './control_lease.uc';
 import { repair_service, repair_pending, cluster_busy, controller_repair_busy } from './repair.uc';
 import { lifecycle_service, lifecycle_busy } from './lifecycle.uc';
@@ -84,7 +84,7 @@ export function cluster_service(io, pairing) {
 				filter(keys(a.nodes), (n) => n != id),
 				(n) => mesh_mac(n)
 			),
-			root_mac: mesh_mac(pairing.root().id), bootstrap:io.bootstrap_wifi?.() || []
+			...peer_context(pairing.root(),load(),id), bootstrap:io.bootstrap_wifi?.() || []
 		};
 	}
 	function preflight(intent, request_id, maintenance) {
@@ -100,7 +100,7 @@ export function cluster_service(io, pairing) {
 			if (!io.network_snapshot) die('backend_unavailable: Fresh network inventory is unavailable');
 			intent = resolve_networks(intent, io.network_snapshot(), io.load('state.json')?.owned || []);
 		}
-		validate_controller_management(root.overrides, root.address);
+		validate_controller_management(root.overrides,root.address,null,root);
 		if (controller_repair_busy(io)) die('busy: Controller configuration repair is pending');
 		if (io.local.repair_status?.()?.paused === true) die('mesh_disabled: Enable controller Mesh first');
 		intent = clone(intent);
@@ -149,7 +149,7 @@ export function cluster_service(io, pairing) {
 			die(
 				'maintenance_required: Backhaul channel or credentials require coordinated wired maintenance'
 			);
-		let local = local_intent(intent, root.overrides, true, root.gateway, root.id),
+		let local=controller_intent(intent,root.overrides,root,s),
 			plan = io.local.preview(local);
 		if (length(plan.errors)) die('preflight_failed: Controller candidate failed preflight');
 		let leases = adopt_leases(s);
@@ -209,7 +209,8 @@ export function cluster_service(io, pairing) {
 			length(filter(keys(a.nodes), (id) => {
 				let seen = io.presence?.(id), path = s.members[id]?.report?.backhaul;
 				return seen?.boot != io.boot() || io.now() - (seen?.seen || 0) >= 15 ||
-					path?.active != 'wired' || path?.wired !== true;
+					!(path?.active=='wired' && path?.wired===true ||
+						pairing.root().anchor?.id==id && s.members[id]?.report?.data_gateway===true && path?.active=='gateway');
 			}))
 		)
 			die('maintenance_required: All APs must report an authenticated wired path');
@@ -365,7 +366,8 @@ export function cluster_service(io, pairing) {
 					ack.status == 'awaiting_confirm' &&
 					report.health?.ok === true &&
 					(node.command.intent?.backhaul?.mode == 'wired' ||
-						report.backhaul?.wireless_verified === true)
+						report.backhaul?.wireless_verified === true || root.anchor?.id==id &&
+						report.data_gateway===true && report.backhaul?.active=='gateway')
 				) {
 					node.status = 'awaiting_confirm';
 					node.command = null;
@@ -406,7 +408,7 @@ export function cluster_service(io, pairing) {
 				version: s.version,
 				intent: s.intent,
 				control: lease_for(s, id),
-					root_mac: mesh_mac(root.id), bootstrap:io.bootstrap_wifi?.() || []
+				...peer_context(root,s,id), bootstrap:io.bootstrap_wifi?.() || []
 				};
 				if (m.control_configured!==true && m.version===0) {
 					let tx=m.report?.transaction, ack=m.report?.command,

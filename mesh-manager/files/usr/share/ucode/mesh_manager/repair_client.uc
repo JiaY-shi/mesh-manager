@@ -4,7 +4,7 @@ import { effective_settings, settings_context } from './local_settings.uc';
 import * as fs from 'fs';
 import { acquire } from './locking.uc';
 import { clone, equal } from './model.uc';
-import { local_intent } from './extended.uc';
+import { local_intent, node_peers } from './extended.uc';
 import { require_lease } from './control_lease.uc';
 
 export function serialized_repair(callback) {
@@ -109,8 +109,8 @@ export function repair_client(io) {
 				die('protocol_error: Invalid controller repair version');
 			if (method == stage_method && reply.version != args.approval?.root_version)
 				die('preview_changed: Controller intent version changed');
-			let intent = local_intent(reply.intent, { ...(settings ? args.local : effective_settings(frame.data, frame.state)), peers: [reply.root_mac] },
-				false, 'bridge', frame.data.id, require_lease(reply.control));
+			let intent = local_intent(reply.intent, { ...(settings ? args.local : effective_settings(frame.data, frame.state)), peers: node_peers(frame.data.id,reply) },
+				false, 'bridge', frame.data.id, require_lease(reply.control), frame.data.anchor || reply.anchor);
 			if (context) context.root_version = reply.version;
 			if (method == preview_method) {
 				preview_current(frame);

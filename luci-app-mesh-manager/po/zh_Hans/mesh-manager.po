@@ -2493,6 +2493,9 @@ msgstr "6 GHz 需要 WPA3。没有 6 GHz 的节点使用其他已选可用频段
 msgid "Allow mutual access with LAN"
 msgstr "允许与主 LAN 互访"
 
+msgid "Allow traffic in both directions between this network and the main LAN. Other business networks remain isolated."
+msgstr "允许此网络与主 LAN 双向通信。其他业务网络仍保持隔离。"
+
 msgid "Automatic"
 msgstr "自动"
 
@@ -2523,6 +2526,9 @@ msgstr "启用网络"
 msgid "Enable planning"
 msgstr "启用规划"
 
+msgid "Guest"
+msgstr "访客"
+
 msgid "Guest network"
 msgstr "访客网络"
 
@@ -2531,6 +2537,9 @@ msgstr "允许上网"
 
 msgid "Keep current"
 msgstr "保留当前值"
+
+msgid "LAN"
+msgstr "主 LAN"
 
 msgid "LAN access exceptions"
 msgstr "主 LAN 访问例外"
@@ -2546,6 +2555,9 @@ msgstr "功率上限（dBm）"
 
 msgid "Require on every node"
 msgstr "所有节点必须支持"
+
+msgid "The planned power never exceeds the selected ceiling or the driver regulatory limit."
+msgstr "规划功率不超过所选上限和驱动报告的监管限制。"
 
 msgid "Transmit power"
 msgstr "发射功率"
@@ -2568,11 +2580,113 @@ msgstr "可用时启用"
 msgid "VLAN ID"
 msgstr "VLAN ID"
 
+msgid "Checking all devices"
+msgstr "正在检查所有设备"
+
+msgid "Ready for approval"
+msgstr "等待批准"
+
+msgid "Checking network health"
+msgstr "正在检查网络健康"
+
+msgid "Configuration confirmed"
+msgstr "配置已确认"
+
+msgid "Transferring controller authority"
+msgstr "正在转移控制权"
+
+msgid "Authority received"
+msgstr "控制权已接收"
+
+msgid "Activating new controller"
+msgstr "正在启用新控制器"
+
+msgid "Retiring previous controller authority"
+msgstr "正在移除原控制器的控制权"
+
+msgid "Connecting to new controller"
+msgstr "正在连接新控制器"
+
+msgid "Connected to new controller"
+msgstr "已连接新控制器"
+
+msgid "Completing migration"
+msgstr "正在完成迁移"
+
+msgid "Migration complete"
+msgstr "迁移已完成"
+
+msgid "Migration needs attention"
+msgstr "迁移需要处理"
+
+msgid "Migration preview is unavailable"
+msgstr "迁移预览不可用"
+
+msgid "Current controller"
+msgstr "当前控制器"
+
+msgid "New controller"
+msgstr "新控制器"
+
+msgid "Data gateway"
+msgstr "数据网关"
+
+msgid "The data gateway, Internet connection and device identities are preserved. Existing enrollment invitations are invalidated. Keep every device connected by Ethernet until migration completes."
+msgstr "保留数据网关、互联网连接和设备身份。已有加入邀请将失效。迁移完成前请保持所有设备通过网线连接。"
+
+msgid "Approve migration"
+msgstr "批准迁移"
+
+msgid "I approve moving controller authority to the displayed device"
+msgstr "我批准将控制权迁移到所示设备"
+
+msgid "Review controller migration"
+msgstr "检查控制器迁移"
+
+msgid "Open new controller"
+msgstr "打开新控制器"
+
+msgid "Review migration"
+msgstr "检查迁移"
+
+msgid "Cancel migration"
+msgstr "取消迁移"
+
+msgid "Resume migration"
+msgstr "继续迁移"
+
+msgid "Move controller management manually to a synchronized device. The data gateway stays on its current device."
+msgstr "手动将控制器管理迁移到已同步的设备。数据网关仍由当前设备承担。"
+
+msgid "Preview controller migration"
+msgstr "预览控制器迁移"
+
+msgid "Controller migration"
+msgstr "控制器迁移"
+
+msgid "Advanced"
+msgstr "高级"
+
 msgid "Native 5 GHz coexistence may exchange the primary and secondary channels within the approved block."
 msgstr "原生 5 GHz 共存机制可在批准的信道块内交换主、副信道。"
+
+msgid "Controller migration is managed by the current controller."
+msgstr "请在当前控制器上管理控制器迁移。"
 
 msgid "Choose the highest driver power candidate at or below the ceiling. If none is available, planning is refused. Actual driver power is checked before confirmation."
 msgstr "选择不超过上限的最高驱动候选功率。没有可用档位时拒绝规划，确认前检查驱动实际功率。"
 
+msgid "Fresh network inventory is required for Guest configuration"
+msgstr "配置访客网络需要最新的网络地址信息。"
+
 msgid "Allow traffic in both directions between this network and the main LAN. Guest client isolation is configured separately."
 msgstr "允许此网络与主 LAN 双向互访。访客客户端隔离单独配置。"
+
+msgid "Cancelling"
+msgstr "正在取消"
+
+msgid "Waiting"
+msgstr "等待中"
+
+msgid "Automatic channel choices use passive measurements when available, otherwise deterministic legal allocation"
+msgstr "自动信道选择优先采用被动负载测量；没有测量时，按确定规则分配合法信道"

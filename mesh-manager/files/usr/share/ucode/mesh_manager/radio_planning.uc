@@ -182,7 +182,17 @@ export function radio_plan(intent, snapshot, cap, owned) {
 			reason, changed: !equal(before, after) });
 	}
 	if (length(errors)) return { errors, ops, warnings, effective };
-
+	if (cap.migration_metadata===true) {
+		for (let owner in owned || []) {
+			if (owner.config!='wireless' || index(['planned client channel','planned client width',
+				'planned client power','reviewed radio country'],owner.reason)<0) continue;
+			if (!equal(snapshot.wireless?.[owner.section]?.values?.[owner.option] ?? null,owner.after))
+				fail('ownership_conflict','Committed radio settings changed outside Mesh Manager');
+			else field(owner.section,owner.option,clone(owner.after),owner.reason);
+		}
+		push(warnings,'Controller migration preserves the committed radio configuration');
+		return {errors,ops:length(errors)?[]:ops,warnings,effective};
+	}
 	if (!p?.enabled) {
 		for (let owner in owned || []) {
 			if (owner.config != 'wireless' || index(['planned client channel', 'planned client width', 'planned client power', 'reviewed radio country'], owner.reason) < 0) continue;

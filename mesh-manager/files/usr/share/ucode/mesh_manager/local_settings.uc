@@ -26,7 +26,8 @@ export function settings_identity(data, state) {
 export function settings_context(data, state, local) {
 	let record = { scope: settings_scope(data), values: clone(local) };
 	validate_settings(record);
-	if (data.role == 'root') validate_controller_management(local, data.address);
+	if (data.role == 'root' || data.anchor!=null && data.id!=null && data.anchor.id==data.id)
+		validate_controller_management(local, data.anchor!=null && data.id!=null && data.anchor.id==data.id ? data.anchor.address : data.address,null,data);
 	return { record, before: effective_settings(data, state),
 		identity: { id: data.id, role: data.role, network_id: data.network_id,
 			binding: data.binding || null, address: data.address || null, gateway: data.gateway || null } };

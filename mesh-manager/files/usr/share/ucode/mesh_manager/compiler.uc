@@ -3,6 +3,7 @@
 import { validate, equal, public_op } from './model.uc';
 import { compile_extended, validate_controller_management, CONTROLLER_ADDRESS_MESSAGE } from './extended.uc';
 import { port_tokens as tokens, device_path } from './topology.uc';
+import { valid_anchor } from './authority.uc';
 
 function enabled(value) {
 	if (value == null || value === false || value === 0) return false;
@@ -22,8 +23,10 @@ function compile_legacy(intent, snapshot, capabilities, owned) {
 	function fail(code, message) {
 		push(errors, { code, message });
 	}
-	if (capabilities.controller_identity?.role == 'root') {
-		try { validate_controller_management({ management: intent?.management }, capabilities.controller_identity.address); }
+	let identity=capabilities.controller_identity;
+	if (identity?.role == 'root' || valid_anchor(identity?.anchor) && identity.anchor.id==identity.id) {
+		let address=identity.anchor && identity.anchor.id==identity.id ? identity.anchor.address : identity.address;
+		try { validate_controller_management({ management: intent?.management }, address, null, identity); }
 		catch (e) { fail('controller_address_unsupported', CONTROLLER_ADDRESS_MESSAGE); }
 	}
 	if (length(errors)) return { errors, ops, conflicts, warnings };

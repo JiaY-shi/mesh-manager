@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-only
 'use strict';
 import * as durable from './durable.uc';
-import { dispatch as local_dispatch, agent_status, restoration_committed, authorize_restoration } from './runtime.uc';
+import { dispatch as local_dispatch, agent_status, migration_local_status, restoration_committed, authorize_restoration } from './runtime.uc';
 import { handoff_stage } from './handoff_runtime.uc';
 import { onboard_standby_stop } from './onboarding.uc';
 
@@ -10,6 +10,10 @@ import { onboard_standby_stop } from './onboarding.uc';
 export function agent_local() {
 	let local = {
 		preview: (intent) => local_dispatch('preview', { intent }),
+		migration_preview:(intent)=>local_dispatch('migration_preview',{intent}),
+		migration_stage:(intent,request_id,takeover,approval)=>local_dispatch('migration_stage',{intent,request_id,takeover,approval}),
+		retirement_preview:(intent)=>local_dispatch('migration_retire_preview',{intent}),
+		retirement_stage:(intent,request_id,approval)=>local_dispatch('migration_retire_stage',{intent,request_id,approval}),
 		local_overrides_preview: (intent, context) => local_dispatch('local_overrides_preview', { intent, context }),
 		local_overrides_stage: (intent, request_id, takeover, approval, context) =>
 			local_dispatch('local_overrides_stage', { intent, request_id, takeover, approval, context }),
@@ -32,6 +36,7 @@ export function agent_local() {
 		rollback: (transaction_id) => local_dispatch('rollback', { transaction_id }),
 		status: (view) => local_dispatch('status', { view: view || 'nodes' }),
 		agent_status,
+		migration_status: migration_local_status,
 		restoration_committed
 	};
 	local.repair_status = () => {

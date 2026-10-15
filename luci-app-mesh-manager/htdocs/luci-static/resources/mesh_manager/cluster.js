@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-only
 'use strict';
 'require mesh_manager.network_extensions as extensions';
+'require mesh_manager.migration as migration';
 'require mesh_manager.history as history';
 'require mesh_manager.slow_rpc as slow_rpc';
 'require baseclass';
@@ -93,19 +94,20 @@ function backhaulModeLabel(mode) {
 }
 function localFields(data,identity) {
 	var old=identity.overrides || {}, addresses=data.local.management && data.local.management.addresses || [];
-	var root=identity.role==='root', router=root && identity.gateway!=='bridge';
-	var protocol=select((root ? [] : [['dhcp',_('Upstream DHCP')]]).concat([['static',_('Static address')]]),root ? 'static' : old.management && old.management.protocol || 'dhcp');
+	var root=identity.role==='root', physical=identity.data_gateway ? identity.data_gateway.id===identity.id : root,
+		fixed=physical || root && old.management && old.management.protocol==='static', router=physical && (identity.data_gateway ? identity.data_gateway.gateway : identity.gateway)!=='bridge';
+	var protocol=select((fixed ? [] : [['dhcp',_('Upstream DHCP')]]).concat([['static',_('Static address')]]),old.management && old.management.protocol || (fixed ? 'static' : 'dhcp'));
 	var address=input(root ? identity.address || addresses[0] && addresses[0].address || '' : old.management && old.management.address || addresses[0] && addresses[0].address || ''), mask=input(old.management && old.management.netmask || '255.255.255.0');
 	var gateway=input(old.gateway || ''), uplink=input(old.uplink || data.local.wan_device || 'wan');
 	var radios=(data.capabilities.radios || []).map(function(r) { return {name:r.name,box:checkbox(!old.radios || old.radios.indexOf(r.name)>=0),band:r.band}; });
 	var mesh=select([['',_('None')]].concat(radios.map(function(r) { return [r.name,r.name+(r.band ? ' ('+r.band+')' : '')]; })),old.mesh_radio || (radios.filter(function(r) { return r.band === '5g'; })[0] || {}).name || '');
 	var legacy=checkbox(old.disable_legacy_mesh), name=input(old.name || identity.name || data.local.board && data.local.board.model || 'OpenWrt');
-	address.readOnly=root;
+	address.readOnly=root || physical;
 	var addressField=field(_('IPv4 address'),address,root ? _('Coordinated controller address migration is not implemented; preserve the existing static LAN address') : _('A local override, not synchronized to other nodes. Choose an unused address outside the upstream DHCP pool.'));
 	var maskField=field(_('Netmask'),mask,_('Must match the management subnet. An incorrect address or mask can disconnect this device.'));
 	var gatewayField=field(_('Bridge gateway override'),gateway,_('Only for static bridge/AP management. Leave empty to preserve existing local gateway and DNS settings.'));
 	function visibility() {
-		protocol.disabled=root;
+		protocol.disabled=root || physical;
 		address.disabled=mask.disabled=protocol.value!=='static';
 		addressField.hidden=maskField.hidden=protocol.value!=='static';
 		gatewayField.hidden=router || protocol.value!=='static';
@@ -115,18 +117,18 @@ function localFields(data,identity) {
 		fields:[field(_('Node name'),name,_('A display name for this device; it does not change its cryptographic identity.')),
 			field(_('Local radios'),E('div',{'class':'mm-radio-list'},radios.map(function(r) { return E('label',{},[r.box,' ',r.name+(r.band ? ' ('+r.band+')' : '')]); })),_('Map the unified client Wi-Fi to radios actually present on this device. Radio names are not copied from the controller.')),
 			field(_('Wireless backhaul radio'),mesh,_('Used only for 802.11s backhaul. Client roaming and node backhaul are separate features.'))]
-			.concat(identity.role==='root' ? [] : [field(_('AP uplink port'),uplink,_('Physical port connected to the upstream LAN. Taking over a WAN port disables its local routing and bridges it into the AP LAN.'))])
+			.concat(physical ? [] : [field(_('AP uplink port'),uplink,_('Physical port connected to the upstream LAN. Taking over a WAN port disables its local routing and bridges it into the AP LAN.'))])
 			.concat([field(_('Management protocol'),protocol,root ? _('Coordinated controller address migration is not implemented; preserve the existing static LAN address') : _('AP nodes obtain management addresses from the existing gateway by default.')),
 			addressField,maskField,gatewayField,
 			field(_('Approve legacy mesh takeover'),legacy,_('Explicitly disable an existing mesh interface before creating managed backhaul to avoid competing paths and loops. Original settings remain available for restoration.'))]),
 		value:function() {
 			var management={interface:'lan',protocol:protocol.value};
 			if(protocol.value==='static') { management.address=address.value;management.netmask=mask.value; }
-			return Object.assign({},old,{name:name.value,radios:radios.filter(function(r) { return r.box.checked; }).map(function(r) { return r.name; }),mesh_radio:mesh.value || null,uplink:identity.role==='root' ? null : uplink.value,
+			return Object.assign({},old,{name:name.value,radios:radios.filter(function(r) { return r.box.checked; }).map(function(r) { return r.name; }),mesh_radio:mesh.value || null,uplink:physical ? null : uplink.value,
 			management:management,gateway:gateway.value || null,disable_legacy_mesh:legacy.checked}); },
 		gatewayMode:function(mode) {
-			router=root && mode==='router';
-			protocol.value=root ? 'static' : old.management && old.management.protocol || 'dhcp';
+			router=physical && mode==='router';
+			protocol.value=old.management && old.management.protocol || (fixed ? 'static' : 'dhcp');
 			visibility();
 		}
 	};
@@ -484,7 +486,7 @@ function unifiedForm(data,c,refresh,writable,page) {
 		if(next.cluster && next.active && ['committed','rolled_back','rollback_conflict','expired'].indexOf(next.active.status)<0)busy=true;
 		if(latest.lifecycle && ['complete','failed','partial','cancelled','expired'].indexOf(latest.lifecycle.phase)<0)busy=true;
 		var stale=(latest.version || 0)!==initialVersion;
-		if(next.cluster && next.mesh_enabled===false)busy=true;
+		if(next.cluster && (next.mesh_enabled===false || migration.pending(next.cluster)))busy=true;
 		widgets.lockEditor(editor,!writable || sending || !!busy || stale);
 		var drift=next.cluster && next.drift && next.drift.length;
 		save.disabled=!writable || !widgets.recoveryReady(capabilities) || sending || !!busy || stale || !!drift;
@@ -531,6 +533,8 @@ function showClusterReview(data,c,a,refresh,writable) {
 function summary(page,data,c,refresh,writable) {
 	if(!c)return [];
 	var result=[],id=c.identity || {},a=c.active;
+	if(page==='advanced')result.push(migration.section(data,c,refresh,writable));
+	writable=writable && !migration.pending(c);
 	if(page==='nodes'){
 		var stop=lifecycle.stopStatus(data,refresh,writable);if(stop)result.push(stop);
 		if(id.role==='ap' && data.configured)result.push(widgets.section(_('This device'),[table([_('Node'),_('Status'),_('Mesh'),_('Actions')],[
@@ -729,10 +733,10 @@ return baseclass.extend({
 				E('div',{'class':'mm-form mm-basic-form'},[fields.fields[0]]),
 				widgets.details(_('Advanced settings'),[localFacts,E('div',{'class':'mm-form'},fields.fields.slice(1))])
 			]);
-			widgets.lockEditor(editor,!writable);
+			widgets.lockEditor(editor,!writable || migration.pending(c));
 			var save=button(_('Preview and apply'),function() {
 				return localSettingsPreview(fields.value(), data, refresh, writable);
-			},!writable || !data.mesh_enabled);
+			},!writable || migration.pending(c) || !data.mesh_enabled);
 			save.classList.replace('cbi-button-neutral','cbi-button-save');
 			var addresses=data.local.management && data.local.management.addresses || [];
 			var localRole=c.identity.role==='ap' ? _('AP node') : c.identity.gateway==='bridge' ? _('Root bridge') : _('Root router');
@@ -752,7 +756,7 @@ return baseclass.extend({
 					widgets.failure(e.error,'first-configuration')) || E('span')] : []);
 				var local=next.active && ['committed','rolled_back','rollback_conflict','expired'].indexOf(next.active.status)<0;
 				var active=next.cluster && next.cluster.active;
-				var busy=local || active && ['complete','partial','failed','rolled_back','expired'].indexOf(active.phase)<0;
+				var busy=migration.pending(next.cluster) || local || active && ['complete','partial','failed','rolled_back','expired'].indexOf(active.phase)<0;
 				widgets.lockEditor(editor,!writable || !!busy || !next.mesh_enabled);
 				save.disabled=!writable || !!busy || !next.mesh_enabled;
 			};

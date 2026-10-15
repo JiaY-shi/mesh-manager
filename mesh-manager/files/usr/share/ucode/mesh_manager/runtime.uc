@@ -177,7 +177,10 @@ export function capabilities(snapshot, cached, intent) {
 		catch (e) { die('identity_error: Cannot read trusted controller identity'); }
 		if (type(identity) != 'object' || index(['unbound', 'root', 'ap'], identity.role) < 0)
 			die('identity_error: Cannot read trusted controller identity');
-		controller_identity = { role: identity.role, address: identity.role == 'root' ? identity.address : null };
+		controller_identity = {role:identity.role,id:identity.id,address:identity.address || identity.anchor?.address || null,
+			gateway:identity.gateway,anchor:identity.anchor || null,migration:identity.migration ? {
+				id:identity.migration.id,phase:identity.migration.phase,source:identity.migration.source,target:identity.migration.target,
+				anchor:identity.migration.anchor} : null};
 	}
 	let pending = false;
 	for (let config in CONFIGS) {
@@ -815,6 +818,26 @@ export function frozen_agent_status(io) {
 export function agent_status() {
 	return frozen_agent_status({ read_locked, load, snapshot, boot, now, health, observe });
 }
+// Private adapter for migration only. Public status intentionally redacts credentials
+// and samples candidate health only while awaiting confirmation. Migration also
+// needs the exact committed intent for cancellation and listener retirement.
+export function frozen_migration_status(io) {
+	let frame=io.read_locked(()=>({journal:io.load(),snapshot:io.snapshot(),boot:io.boot(),now:io.now()}),5),
+		result=engine({load:()=>frame.journal,snapshot:()=>frame.snapshot,
+			boot:()=>frame.boot,now:()=>frame.now}).status('agent',true).data,
+		journal=frame.journal;
+	result.intent=clone(journal?.intent);
+	result.health=result.mesh_enabled && journal?.intent ? io.health(
+		journal.active?.status=='awaiting_confirm' ? journal.active :
+		{kind:'configure',intent:journal.intent,ops:[],expected_owned:journal.owned || []}) : null;
+	let after=io.read_locked(()=>({journal:io.load(),snapshot:io.snapshot(),boot:io.boot()}),5);
+	if(after.boot!=frame.boot || !equal(after.journal,frame.journal) || !equal(after.snapshot,frame.snapshot))
+		die('busy: Local configuration changed during migration health observation');
+	return result;
+}
+export function migration_local_status() {
+	return frozen_migration_status({read_locked,load:()=>load(true),snapshot,boot,now,health});
+}
 export function dispatch(method, args) {
 	if (index(['repair_preview', 'local_overrides_preview'], method) >= 0) return frozen_repair_preview({
 		locked, load, snapshot, settings, settings_source, approval_key, boot, now, capabilities
@@ -843,12 +866,17 @@ export function dispatch(method, args) {
 	}
 	return locked((service) => {
 		if (method == 'preview') return service.preview(args.intent);
+		if (method == 'migration_preview') return service.migration_preview(args.intent);
+		if (method == 'migration_retire_preview') return service.retirement_preview(args.intent);
 		if (method == 'mesh_preview') return service.mesh_preview(args.enabled, args.intent);
 		if (method == 'rollback') return service.rollback(args.transaction_id);
 		if (!recovery_available())
 			die('daemon_unavailable: Recovery service is not running; changes are blocked');
 		if (method == 'stage')
 			return service.stage(args.intent, args.request_id, args.takeover, args.approval);
+		if (method == 'migration_stage')
+			return service.migration_stage(args.intent,args.request_id,args.takeover,args.approval);
+		if (method == 'migration_retire_stage') return service.retirement_stage(args.intent,args.request_id,args.approval);
 		if (method == 'local_overrides_stage')
 			return service.local_overrides_stage(args.intent, args.request_id, args.takeover, args.approval, args.context);
 		if (method == 'repair_stage')

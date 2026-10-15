@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 'use strict';
+import { valid_anchor, migration_pending } from './authority_model.uc';
 
 // Mesh disable keeps the AP's control agent for reporting and remote re-enable.
 // An unbound, idle device has no dedicated process. Shared OpenWrt services are
@@ -9,6 +10,7 @@ export function service_policy(identity,state,temporary,demand,cluster) {
 		unknown=identity!=null && (identity.schema!==1 || index(roles,identity.role)<0) ||
 			state!=null && (state.schema!==1 || type(state.owned)!='array' || type(state.history)!='array'),
 		pending=state?.active!=null && index(final,state.active.status)<0 ||
+			migration_pending(identity?.migration) || migration_pending(cluster?.migration) || identity?.authority_fence!=null ||
 			state?.intent==null && length(state?.owned || [])>0 ||
 			identity?.role=='root' && length(filter([cluster?.active,cluster?.lifecycle],job=>job!=null &&
 				index(['complete','partial','failed','rolled_back','cancelled','expired'],job.phase)<0))>0,
@@ -25,7 +27,14 @@ export function service_policy(identity,state,temporary,demand,cluster) {
 	if(enrolling || temporary)push(instances,'enrollment');
 	if(backhaul)push(instances,'backhaul');
 	if(agent)push(instances,'agent');
+	let anchor=valid_anchor(identity?.anchor) && identity.anchor.id==identity.id && bound,
+		target=bound && migration_pending(identity.migration) && identity.migration.target==identity.id,
+		retiring=bound && identity.migration!=null && identity.id!=null && identity.migration.source==identity.id &&
+			index(['switched','finishing'],identity.migration.phase)>=0;
 	if(listener)for(let name in ['node','enroll','control'])push(instances,name);
+	else if(anchor && (enabled || pending))for(let name in ['node','control'])push(instances,name);
+	else if(target || retiring)push(instances,'control');
+
 	return {instances,mode:!length(instances)?'stopped':unknown || pending || temporary && !bound?'recovery':
 		enrolling || joining?'joining':enabled?'active':bound?'standby':'starting'};
 }

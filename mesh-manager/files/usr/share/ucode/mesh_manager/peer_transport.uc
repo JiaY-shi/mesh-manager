@@ -2,7 +2,7 @@
 'use strict';
 import { run } from 'mesh_process';
 import * as fs from 'fs';
-import { random, read } from './durable.uc';
+import { random, read, load } from './durable.uc';
 import { unseal } from './signed_response.uc';
 import { private_address } from './identity.uc';
 import { request_budget, control_health } from './protocol_worker.uc';
@@ -30,7 +30,8 @@ export function exchange(binding, request, enrollment, device, timeout_ms, recor
 		enrollment ? '-' : '/etc/mesh-manager/device.key',
 		binding.controller_id
 	];
-	if (device) push(argv, device);
+	if (binding.controller_certificate!=null) push(argv,device || '-',binding.controller_certificate);
+	else if (device) push(argv, device);
 	if (timeout_ms != null && (type(timeout_ms) != 'int' || timeout_ms < 1))
 		die('invalid_timeout: Peer exchange requires a positive finite budget');
 	if (record != null && type(record) != 'function')
@@ -62,7 +63,7 @@ export function handoff_exchange(binding, request, device, timeout_ms, record) {
 export function probe(binding, device) {
 	let nonce = random(16),
 		reply = exchange(
-			device ? { ...binding, address: '169.254.254.1' } : binding,
+			device ? { ...binding, address: binding.control_address || '169.254.254.1' } : binding,
 			{ protocol: 1, action: 'probe', network_id: binding.network_id, nonce },
 			false,
 			device
@@ -84,5 +85,5 @@ export function probe_management(binding) {
 	return probe(binding, null);
 }
 export function probe_managed(binding) {
-	return control_health({ available: device => fs.access('/sys/class/net/' + device), probe }, binding);
+	return control_health({ available: device => fs.access('/sys/class/net/' + device), probe }, binding,load('identity.json'));
 }

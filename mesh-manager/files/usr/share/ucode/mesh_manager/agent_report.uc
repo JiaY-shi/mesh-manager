@@ -4,6 +4,7 @@ import * as client_events from './client_events.uc';
 import { public_op } from './model.uc';
 import { recovery_report } from './controller_loss.uc';
 import { software_status } from './software_status.uc';
+import {sanitize_migration_receipt} from './migration_model.uc';
 
 export function sanitize_report(r) {
 	let clients = client_events.sanitize_clients(r.clients);
@@ -29,6 +30,7 @@ export function sanitize_report(r) {
 		local_version: type(r.local_version) == 'int' ? r.local_version : null,
 		mesh_enabled: type(r.mesh_enabled) == 'bool' ? r.mesh_enabled : null,
 		configured: r.configured === true,
+		data_gateway:r.data_gateway===true,
 		model: r.model || null,
 		software: software_status(r.software),
 		management: r.management || null,
@@ -40,6 +42,7 @@ export function sanitize_report(r) {
 		clients,
 		clients_complete: r.clients_complete === true && type(r.clients) == 'array' &&
 			length(clients) == length(r.clients),
+		migration:sanitize_migration_receipt(r.migration),
 		command
 	};
 }

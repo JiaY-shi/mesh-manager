@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-only
 'use strict';
 import { clone, equal } from './model.uc';
-import { local_intent } from './extended.uc';
+import { controller_intent } from './extended.uc';
 import { settings_context } from './local_settings.uc';
 import { cluster_busy, repair_pending } from './repair.uc';
 export function root_settings(io, pairing, method, args) {
@@ -18,7 +18,7 @@ export function root_settings(io, pairing, method, args) {
 	if (cluster_busy(state) || repair_pending(state)) die('busy: A cluster operation is pending');
 	if (!state.intent) die('not_managed: Controller has no confirmed network intent');
 	let context = settings_context(data, local, args.local),
-		intent = local_intent(state.intent, args.local, true, data.gateway, data.id);
+		intent = controller_intent(state.intent, args.local, data, state);
 	context.root_version = state.version;
 	if (method == 'local_overrides_preview') return { ...io.local.local_overrides_preview(intent, context), root_version: state.version };
 	if (args.approval?.root_version != state.version) die('preview_changed: Controller intent version changed');

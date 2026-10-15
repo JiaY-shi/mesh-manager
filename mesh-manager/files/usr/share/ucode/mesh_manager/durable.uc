@@ -59,6 +59,13 @@ export function write_cas(name, expected, content, timeout_ms) {
 	if (result?.code !== 0) die('storage_error: Private durable replacement was not confirmed');
 	if (read(name) !== content) die('storage_conflict: Durable replacement readback was changed');
 }
+export function remove_ca_key(expected) {
+	if (type(expected)!='string' || !length(expected) || length(expected)>8192 || read('network-ca.key')!==expected)
+		die('storage_conflict: Transferred signing key changed before retirement');
+	let result=run(['/usr/libexec/mesh-manager-store','--remove-cas','network-ca.key',''+length(expected)],expected,5000);
+	if(result?.code===2)die('storage_conflict: Transferred signing key changed during retirement');
+	if(result?.code!==0 || read('network-ca.key')!==null)die('storage_error: Signing key retirement was not confirmed');
+}
 export function load(name) {
 	let content = read(name);
 	if (content == null) return null;

@@ -13,7 +13,7 @@ import { invitation, joining_code } from './invitation.uc';
 import { handoff_prepare } from './first_handoff.uc';
 import { handoff_tick } from './handoff_runtime.uc';
 import { cluster_service, public_active } from './cluster.uc';
-import { validate_overrides, validate_controller_management, local_intent } from './extended.uc';
+import { validate_overrides, validate_controller_management, controller_intent } from './extended.uc';
 import { canonical, clone, equal, public_intent } from './model.uc';
 import { dispatch as local_dispatch, snapshot, guest_network_snapshot, status_view, observe_clients, publish_observation,
 	root_bootstrap_wifi } from './runtime.uc';
@@ -35,6 +35,9 @@ import { lifecycle_client } from './lifecycle_client.uc';
 import { exchange as transport_exchange, probe, probe_managed } from './peer_transport.uc';
 import { seal, validate_request } from './signed_response.uc';
 import { restoration_epoch } from './restoration.uc';
+import {require_authority} from './authority.uc';
+import {public_migration} from './migration_model.uc';
+import {anchor_roster} from './anchor_roster.uc';
 
 import { agent_local } from './agent_local.uc';
 import { sanitize_report } from './agent_report.uc';
@@ -175,12 +178,14 @@ function io() {
 		seen,
 		observe_clients: client_events.observe,
 		observe_report,
+		observed_report,
 		bootstrap_wifi:root_bootstrap_wifi,
 		restoration_observation,
 		sanitize_report,
 		local_source: (source) => lan_source(source, snapshot().network.lan?.values.device)
 	};
 }
+function migration(i) { return require('mesh_manager.migration_worker')(i || io()); }
 function services() {
 	let i = io(),
 		pair = pairing_service(i);
@@ -377,6 +382,7 @@ export function frozen_cluster_status(i, view) {
 			previous_name:row.previous_name,name:row.name,version:row.version,status:row.status,timestamp:row.timestamp}));
 	}
 	let identity = frame.identity;
+	result.migration=identity?.role=='root' ? public_migration(state?.migration,full ? null : false) : public_migration(identity?.migration,false);
 	result.local_repair = identity?.agent?.repair ? {
 		id: identity.agent.transaction, status: identity.agent.status,
 		transaction_id: identity.agent.transaction_id || null,
@@ -410,13 +416,14 @@ export function history_records(group) {
 	return pair.state()[field] || [];
 }
 export function frozen_status_detail(i, args) {
-	if (index(['cluster', 'repair', 'lifecycle'], args?.kind) < 0 ||
+	if (index(['cluster', 'repair', 'lifecycle', 'migration'], args?.kind) < 0 ||
 		type(args.id) != 'string' || !match(args.id, /^[a-zA-Z0-9_-]{16,96}$/))
 		die('invalid_request: Invalid status detail request');
 	let frame = status_frame(i, true), pair = captured_pair(i, frame);
 	pair.root();
 	let state = pair.state(), result;
-	if (args.kind == 'cluster') result = public_active(state.active);
+	if (args.kind == 'migration') result=public_migration(state.migration);
+	else if (args.kind == 'cluster') result = public_active(state.active);
 	else if (args.kind == 'lifecycle') result = public_lifecycle(state.lifecycle);
 	else {
 		let member = state.members[args.node_id];
@@ -444,7 +451,7 @@ function root_mesh(method, args) {
 	if (args.enabled !== true) die('ap_restore_required: Prepare all AP restores before stopping Root');
 	if (lifecycle_busy(state) || configuration_busy(state, i))
 		die('busy: A cluster operation is pending');
-	let intent = local_intent(state.intent, effective_settings(data, i.load('state.json')), true, data.gateway, data.id);
+	let intent = controller_intent(state.intent, effective_settings(data, i.load('state.json')), data, state);
 	if (method == 'mesh_preview') return i.local.mesh_preview(true, intent);
 	let staged = i.local.mesh_stage(true, intent, args.request_id, args.takeover, args.approval);
 	if (system(['/etc/init.d/mesh-manager', 'reload'], 5000) != 0)
@@ -452,6 +459,16 @@ function root_mesh(method, args) {
 	return staged;
 }
 export function advanced_dispatch(method, args) {
+	if (index(method,'migration_')==0) return durable.locked(()=>{
+		let service=migration();
+		if(method=='migration_status')return service.status();
+		if(method=='migration_preflight')return service.preflight(args.node_id,args.request_id);
+		if(method=='migration_apply')return service.apply(args.request_id,args.approval,args.takeover);
+		if(method=='migration_cancel')return service.cancel(args.request_id);
+		if(method=='migration_resume')return service.resume(args.request_id);
+		die('invalid_method: Unknown migration method');
+	});
+	if(method!='onboard_status')require_authority(durable.load('identity.json'),durable.load('identity.json')?.role=='root' ? durable.load('cluster.json') : null);
 	if (method == 'discover') {
 		if (args.mode == 'wired') return discover(durable.load('identity.json'));
 		if (args.mode == 'wireless')
@@ -551,12 +568,27 @@ export function peer_request(identity, mode, request, source, destination, certi
 		let svc = services(),
 			pair = svc.pair,
 			cluster = svc.cluster;
-		if (mode=='enroll') return pair.enroll(request, source);
+		let local_identity=durable.load('identity.json'),migration_state=pair.state()?.migration;
+		if (mode=='enroll') {require_authority(local_identity,pair.state());return pair.enroll(request, source);}
+		// Completed migrations may still need to drain an AP poll receipt.
+		// Ordinary AP requests retain the normal certificate and ingress checks.
+		if(migration_state && (index(['complete','cancelled','expired'],migration_state.phase)<0 ||
+			request.action=='migration_status' || request.action=='poll' && migration_state.phase=='complete' && request.report?.migration?.phase!='complete')) {
+			let migrated=migration().peer(identity,request,certificate,destination);
+			if(migrated!=null) {
+				let roster=anchor_roster(local_identity,pair.state(),identity,crypto.fingerprint(durable.read('device.crt')));
+				if(roster!=null)migrated.anchor_roster=roster;
+				return seal(request,migrated,identity,{load:durable.load,read:durable.read,time});
+			}
+		}
+		if(local_identity.role!='root')die('not_controller: Only the active controller accepts configuration requests');
 		if (certificate != null && certificate != pair.state().members[identity]?.certificate)
 			die('not_authorized: Node certificate is no longer authorized');
 		let access=control_ingress(durable.load('identity.json'),pair.state(),identity,request,
 			destination,durable.boot(),durable.now());
 		let reply=ingress_response(access,cluster.peer(identity, request));
+		let roster=anchor_roster(local_identity,pair.state(),identity,crypto.fingerprint(durable.read('device.crt')));
+		if(roster!=null)reply.anchor_roster=roster;
 		if (access.pin) {
 			let state=pair.state();
 			if (state.members[identity].control_bound!==true) {
@@ -571,6 +603,10 @@ export function agent_tick() {
 	if (!data) return;
 	if (data.departing) { ap_agent_tick(); return; }
 	if (data.role == 'root') {
+		let moving=durable.load('cluster.json')?.migration;
+		if(moving && index(['complete','cancelled','expired'],moving.phase)<0 || data.authority_fence) {
+			let service=migration();durable.locked(()=>service.tick_locked());service.handover();return;
+		}
 		durable.locked(() => services().cluster.tick());
 		try {
 			let local = durable.load('state.json');

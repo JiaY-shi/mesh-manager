@@ -42,18 +42,14 @@ start_service() {
 	esac
 	local address
 	rm -f /var/run/mesh-manager-listening
-	case " $instances " in *" node "*) ;; *) return 0 ;; esac
-	address=$(/usr/bin/ucode -l fs -e 'let d,s; try { d=json(fs.readfile("/etc/mesh-manager/identity.json") || "null"); s=json(fs.readfile("/etc/mesh-manager/state.json") || "null"); } catch(e) {} if(d?.role == "root" && (s?.paused !== true || s.active?.mesh_enabled === true && index(["committed","rolled_back","rollback_conflict","expired"],s.active.status)<0)) print(d.address);')
-	[ -n "$address" ] || return 0
-	touch /var/run/mesh-manager-listening
 	for mode in node enroll control; do
+		case " $instances " in *" $mode "*) ;; *) continue ;; esac
 		local port=37901
-		local bind_address="$address" channel_mode="$mode"
+		local bind_address channel_mode="$mode"
+		bind_address=$(MM_LISTENER="$mode" /usr/bin/ucode -e 'import { service_desired } from "mesh_manager.service_runtime"; import { private_address } from "mesh_manager.identity"; let address=service_desired().listeners[getenv("MM_LISTENER")]?.address; if(!private_address(address))exit(1); print(address);') || return 1
 		[ "$mode" = enroll ] && port=37902
-		if [ "$mode" = control ]; then
-			bind_address=169.254.254.1
-			channel_mode=node
-		fi
+		[ "$mode" = control ] && channel_mode=node
+		touch /var/run/mesh-manager-listening
 		procd_open_instance "$mode"
 		procd_set_param command /usr/libexec/mesh-manager-channel serve "$bind_address" "$port" /etc/mesh-manager/network-ca.crt /etc/mesh-manager/device.crt /etc/mesh-manager/device.key "$channel_mode"
 		procd_set_param respawn 3600 5 5

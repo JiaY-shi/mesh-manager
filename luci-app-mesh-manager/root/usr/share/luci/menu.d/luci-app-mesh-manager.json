@@ -10,5 +10,6 @@
 	"admin/network/mesh-manager/backhaul": { "title": "Backhaul", "order": 40, "action": { "type": "view", "path": "mesh-manager/backhaul" } },
 	"admin/network/mesh-manager/clients": { "title": "Clients", "order": 50, "action": { "type": "view", "path": "mesh-manager/clients" } },
 	"admin/network/mesh-manager/history": { "title": "Changes", "order": 60, "action": { "type": "view", "path": "mesh-manager/history" } },
-	"admin/network/mesh-manager/diagnostics": { "title": "Diagnostics", "order": 70, "action": { "type": "view", "path": "mesh-manager/diagnostics" } }
+	"admin/network/mesh-manager/diagnostics": { "title": "Diagnostics", "order": 70, "action": { "type": "view", "path": "mesh-manager/diagnostics" } },
+	"admin/network/mesh-manager/advanced": { "title": "Advanced", "order": 80, "action": { "type": "view", "path": "mesh-manager/advanced" } }
 }

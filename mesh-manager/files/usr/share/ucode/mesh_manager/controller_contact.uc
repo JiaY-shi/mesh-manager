@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-only
 'use strict';
 import * as fs from 'fs';
-import { now, boot } from './durable.uc';
+import { now, boot, load } from './durable.uc';
 import { equal } from './model.uc';
 
 const CONTACT='/var/run/mesh-manager-controller-contact.json';
@@ -39,6 +39,8 @@ export function record_contact(binding) {
 	// This observation never authorizes a configuration or writes flash.
 	try {
 		binding=contact_binding(binding);
+		let identity=load('identity.json');
+		if (identity?.role=='ap' && !equal(binding,contact_binding(identity.binding))) return;
 		let clock=now(),id=boot(),prior=contact_read();
 		if (prior?.boot==id && equal(prior.binding,binding) && clock>=prior.uptime && clock-prior.uptime<2) return;
 		contact_write({boot:id,binding,uptime:clock});

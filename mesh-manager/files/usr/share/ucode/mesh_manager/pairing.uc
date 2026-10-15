@@ -2,6 +2,7 @@
 'use strict';
 import { allocate_lease, adopt_leases } from './control_lease.uc';
 import { settings_identity } from './local_settings.uc';
+import { require_gateway_retained } from './authority.uc';
 import * as crypto from 'mesh_crypto';
 import { clone, valid_text } from './model.uc';
 import { identity_service, public_identity } from './identity.uc';
@@ -274,6 +275,7 @@ export function pairing_service(io) {
 	}
 	function revoke(id) {
 		let controller=root();
+		require_gateway_retained(controller,id);
 		let s = state(),
 			member = s.members[id];
 		if (!member) die('not_found: Node not found');

@@ -10,10 +10,14 @@ import { certificate_diagnostics } from 'mesh_manager.certificate_status';
 import { current_attention } from 'mesh_manager.attention';
 import { wake_service } from 'mesh_manager.service_runtime';
 import { onboard_standby_stop } from 'mesh_manager.onboarding';
+import {require_authority} from 'mesh_manager.authority';
 
 export function invoke(method, args) {
 	try {
 		let result;
+		if(index(['status','status_detail','diagnostics','roaming_status','onboard_status','migration_status','migration_preflight','migration_apply','migration_cancel','migration_resume','rollback'],method)<0) {
+			let identity=durable.load('identity.json');require_authority(identity,identity?.role=='root' ? durable.load('cluster.json') : null);
+		}
 		if (args?.takeover===true && index(['stage','mesh_stage','repair_stage','local_overrides_stage'],method)>=0)
 			wake_service();
 		if(method=='apply') {

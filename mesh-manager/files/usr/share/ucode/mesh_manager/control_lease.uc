@@ -31,6 +31,7 @@ export function lease_table(state) {
 	if (index(keys(state), 'control_schema') >= 0 && state.control_schema !== 1)
 		die('control_address_invalid: Unsupported controller control lease schema');
 	let table = {}, used = {};
+	if(state.reserved_control!=null)used[slot(require_lease(state.reserved_control))]='controller';
 	for (let id in sort(keys(state.members))) {
 		let legacy = control_addresses(id), member = state.members[id];
 		if (type(member) != 'object') die('control_address_invalid: Invalid controller member');
@@ -56,11 +57,12 @@ export function adopt_leases(state) {
 }
 export function allocate_lease(state, id) {
 	let seed = slot(control_addresses(id)), table = lease_table(state), used = {};
+	if(state.reserved_control!=null)used[slot(require_lease(state.reserved_control))]=true;
 	if (table[id]) return table[id];
 	if (length(keys(table)) >= 64) die('limit_exceeded: Maximum 64 nodes');
 	for (let lease in values(table)) used[slot(lease)] = true;
 	// At most 64 occupied slots: N+1 probes always find an unused pair.
-	for (let i = 0; i <= length(keys(table)); i++) {
+	for (let i = 0; i <= length(keys(table))+(state.reserved_control!=null ? 1 : 0); i++) {
 		let next = (seed + i) % 25000;
 		if (!used[next]) return pair(next);
 	}

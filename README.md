@@ -19,6 +19,7 @@ over Ethernet or wirelessly using the controller's Wi-Fi name and password.
 - Configuration previews and automatic rollback when health confirmation fails.
 - Automatic Guest VLAN and subnet allocation, with separate credentials and access policies.
 - Client band, channel, width, and power planning using hardware and regulatory limits.
+- Manual controller migration preserving the data gateway, network settings, and identities.
 - Restore original managed settings when disabling Mesh and rejoin after leaving.
 
 ## Installation
@@ -172,6 +173,18 @@ For an 18 dBm ceiling, candidates of 15/20 dBm select 15 dBm; a node limited to
 also checks the actual power reported by the driver. 6 GHz uses WPA3. Prefer
 allows nodes without 6 GHz to use their other selected bands; Require demands
 support on every node.
+
+### Move the controller
+
+Keep every node online and connected by Ethernet. On the current controller,
+open **Advanced → Controller migration**, select an authorized AP, then review and
+approve the move. The original router remains the data gateway. Wi-Fi credentials,
+backhaul, and radio settings are preserved. Continue using the new controller's
+management address after completion; use the same procedure to move back.
+
+Cancel before authority handover starts. Once handover begins, use the migration
+progress panel to resume interrupted work. Earlier enrollment invitations are
+invalidated; existing device identities and trust are preserved.
 
 ## License
 

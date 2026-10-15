@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: GPL-2.0-only
 'use strict';
 import { clone, equal } from './model.uc';
-import { local_intent } from './extended.uc';
+import { local_intent, node_peers } from './extended.uc';
+import { require_gateway_retained } from './authority.uc';
 import { effective_settings } from './local_settings.uc';
 import { require_lease } from './control_lease.uc';
 import { standby_bootstrap } from './standby.uc';
@@ -41,6 +42,7 @@ export function lifecycle_client(io) {
 			let data = io.load('identity.json');
 			if (data?.role == 'root') return { root:true, result:io.root(method,args) };
 			if (data?.role != 'ap' || !data.binding) die('not_ap: Complete Mesh enrollment first');
+			if(args.enabled===false)require_gateway_retained(data,data.id);
 			let state = io.load('state.json');
 			if (method == 'mesh_confirm' && (!data.agent?.mesh || data.agent.transaction_id != args.transaction_id ||
 				state?.active?.id != args.transaction_id || type(state.active.mesh_enabled) != 'bool'))
@@ -70,7 +72,7 @@ export function lifecycle_client(io) {
 			if (type(reply.version) != 'int' || reply.version < 1) die('protocol_error: Invalid controller Mesh version');
 			if (reserved && reply.version != args.approval?.root_version) die('preview_changed: Controller intent version changed');
 			let intent = args.enabled ? local_intent(reply.intent,
-				{...effective_settings(frame.data,frame.state),peers:[reply.root_mac]},false,'bridge',frame.data.id,require_lease(reply.control)) : null;
+				{...effective_settings(frame.data,frame.state),peers:node_peers(frame.data.id,reply)},false,'bridge',frame.data.id,require_lease(reply.control),frame.data.anchor || reply.anchor) : null;
 			if (method == 'mesh_preview') {
 				io.locked(() => current(frame));
 				let plan = io.local.mesh_preview(args.enabled,intent);

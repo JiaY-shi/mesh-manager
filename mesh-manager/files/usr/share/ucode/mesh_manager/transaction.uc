@@ -9,6 +9,7 @@ import { steering_owned } from './roaming.uc';
 import { validate_settings } from './local_settings.uc';
 import { history_used, history_restored, clear_retained_history } from './history_retention.uc';
 import { recovery_path } from './controller_loss.uc';
+import { require_gateway_retained } from './authority.uc';
 import { approved_radio_choices, committed_radio_choices } from './radio_planning.uc';
 
 const TERMINAL = ['committed', 'rolled_back', 'rollback_conflict', 'expired'];
@@ -284,7 +285,31 @@ export function engine(io) {
 			message: 'Enable Mesh explicitly before applying managed configuration' });
 		return reviewed(s, snapshot, intent, plan, context ? 'overrides' : 'configure', null, context);
 	}
+	function migration_plan(s, snapshot, intent) {
+		// Authority changes must never resample/reconfigure an already committed
+		// radio policy. This private entry point accepts only controller metadata.
+		function data_settings(value) {
+			let data=clone(value);
+			delete data.manager;delete data.anchor;delete data.control;
+			if (data.local) delete data.local.peers;
+			return data;
+		}
+		if (!s.intent || s.paused===true || length(drift(s,snapshot)) ||
+			type(intent)!='object' || !equal(data_settings(intent),data_settings(s.intent)))
+			die('migration_conflict: Controller migration must preserve the committed data and radio settings');
+		let cap=io.capabilities(snapshot,false);
+		if (intent.anchor==null && cap.controller_identity?.migration==null)
+			die('migration_conflict: Restoring pre-migration metadata requires its trusted migration identity');
+		return compile(intent,snapshot,{...cap,migration_metadata:true},s.owned);
+	}
+	function migration_preview(intent) {
+		let s=state(),snapshot=io.snapshot();
+		if (busy(s)) die('busy: Another transaction is active');
+		return reviewed(s,snapshot,intent,migration_plan(s,snapshot,intent),'migration');
+	}
 	function release_plan(s, snapshot, controller_lost) {
+		let identity=s.intent?.anchor ? io.capabilities(snapshot,true).controller_identity : null;
+		require_gateway_retained(identity,identity?.id);
 		if (!s.intent) {
 			if (busy(s)) die('busy: Another transaction is active');
 			let a=s.active;
@@ -421,7 +446,25 @@ export function engine(io) {
 		save(s);
 		return public_active(s.active);
 	}
-	function stage(intent, id, takeover, release, approval, mesh_enabled, context) {
+	function retirement_plan(s,snapshot,intent) {
+		let identity=io.capabilities(snapshot,true).controller_identity,m=identity?.migration;
+		if (identity?.role!='ap' || m==null || identity.id==null || m.source!=identity.id || m.phase!='finishing' ||
+			identity.anchor?.id==identity.id || intent?.manager!==false ||
+			!equal(intent,s.intent) || s.paused===true || length(drift(s,snapshot)))
+			die('migration_conflict: Listener retirement requires the exact migrated AP configuration');
+		let before=snapshot.firewall?.mm_control_tls ?? null,
+			owner=filter(s.owned,o=>o.config=='firewall' && o.section=='mm_control_tls' && o.option==null)[0];
+		if (before!=null && (!owner || !equal(before,owner.after)))
+			die('ownership_conflict: Former controller firewall rule changed');
+		return {errors:[],conflicts:[],dangerous:true,ops:before==null ? [] : [{config:'firewall',
+			section:'mm_control_tls',option:null,type:'rule',before,after:null,changed:true,
+			reason:'retire former controller listener'}]};
+	}
+	function retirement_preview(intent) {
+		let s=state(),snapshot=io.snapshot();
+		return reviewed(s,snapshot,intent,retirement_plan(s,snapshot,intent),'migration_retire');
+	}
+	function stage(intent, id, takeover, release, approval, mesh_enabled, context, retirement, migration) {
 		if (context) validate_settings(context.record);
 		let kind = context ? 'overrides' : release ? 'release' : 'configure';
 		request_id(id);
@@ -445,7 +488,9 @@ export function engine(io) {
 			die('ownership_conflict: Managed fields have external changes');
 		if (release) {
 			plan = release_plan(s, snapshot);
-		} else {
+		} else if (retirement===true) plan=retirement_plan(s,snapshot,intent);
+		else if (migration===true) plan=migration_plan(s,snapshot,intent);
+		else {
 			let choices=approved_radio_choices(approval?.ops);
 			if (choices==null) die('preview_changed: Approved radio choices are invalid');
 			let cap=io.capabilities(snapshot,false,intent);
@@ -461,12 +506,13 @@ export function engine(io) {
 					)
 			);
 		check_approval(s, snapshot, intent, plan,
-			mesh_enabled === true ? 'mesh_enable' : release ? 'mesh_disable' : kind, approval, context);
+			retirement===true ? 'migration_retire' : migration===true ? 'migration' : mesh_enabled === true ? 'mesh_enable' : release ? 'mesh_disable' : kind, approval, context);
 		s.active = {
 			id: io.id(),
 			request_id: id,
 			intent: clone(intent),
 			kind,
+			...(retirement===true ? {migration_retire:true} : {}),
 			...(plan.restore_recheck === true ? {restore_recheck:true} : {}),
 			...(context ? { settings_context: clone(context) } : {}),
 			mesh_enabled: release ? false : mesh_enabled ?? null,
@@ -677,8 +723,9 @@ export function engine(io) {
 			finish(s, 'rolled_back');
 			return;
 		}
-		if (a.kind != 'release' && current_capabilities.controller_identity?.role == 'root') {
-			try { validate_controller_management({ management: a.intent?.management }, current_capabilities.controller_identity.address); }
+		let identity=current_capabilities.controller_identity;
+		if (a.kind != 'release' && (identity?.role=='root' || identity?.id!=null && identity?.anchor?.id==identity.id)) {
+			try { validate_controller_management({ management: a.intent?.management }, identity.anchor && identity.anchor.id==identity.id ? identity.anchor.address : identity.address,null,identity); }
 			catch (e) {
 				a.failure = 'controller_address_unsupported: ' + CONTROLLER_ADDRESS_MESSAGE;
 				finish(s, 'rolled_back');
@@ -766,6 +813,10 @@ export function engine(io) {
 			return result;
 		},
 		preview: candidate,
+		migration_preview,
+		migration_stage:(intent,id,takeover,approval)=>stage(intent,id,takeover,false,approval,null,null,false,true),
+		retirement_preview,
+		retirement_stage:(intent,id,approval)=>stage(intent,id,true,false,approval,null,null,true),
 		local_overrides_preview: (intent, context) => candidate(intent, context),
 		local_overrides_stage: (intent, id, takeover, approval, context) => stage(intent, id, takeover, false, approval, null, context),
 		repair_preview,

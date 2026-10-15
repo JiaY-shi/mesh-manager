@@ -17,7 +17,7 @@ function invoke(method, args, object, timeout) {
 function failure(code) { return { ok:false, error:{code:code,message:code} }; }
 return baseclass.extend({
 	action: function(method, args) {
-		if (['local_overrides_stage','local_overrides_confirm','mesh_preview','mesh_stage','mesh_confirm'].indexOf(method)<0)
+		if (['local_overrides_stage','local_overrides_confirm','mesh_preview','mesh_stage','mesh_confirm','migration_preflight','migration_apply'].indexOf(method)<0)
 			return Promise.reject(new Error('Invalid local settings operation'));
 		// The supervised backend has a 30s deadline. LuCI's default 20s
 		// transport timeout must not abandon a write that is still executing.
