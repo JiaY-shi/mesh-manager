@@ -37,6 +37,7 @@ methods.controller_init = {
 };
 methods.node_revoke = { args: { node_id: '' }, call: handler('node_revoke') };
 methods.certificate_renew = { args: { node_id: '' }, call: handler('certificate_renew') };
+methods.signing_rotate = { args: { expected_epoch: 0, request_id: '' }, call: handler('signing_rotate') };
 methods.node_rename_preview = { args: { node_id: '', name: '' }, call: handler('node_rename_preview') };
 methods.node_rename = { args: { request_id: '', approval: {}, takeover: false }, call: handler('node_rename') };
 methods.cluster_preflight = {

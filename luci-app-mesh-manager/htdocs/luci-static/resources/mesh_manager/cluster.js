@@ -18,7 +18,7 @@ var rpcMethods = {};
 	['onboard_status',[]],
 	['onboard_stop',[]],
 	['node_revoke',['node_id']], ['node_rename_preview',['node_id','name']],
-	['certificate_renew',['node_id']],
+	['certificate_renew',['node_id']], ['signing_rotate',['expected_epoch','request_id']],
 	['node_rename',['request_id','approval','takeover']],
 	['local_overrides_stage',['local','request_id','takeover','approval']], ['apply',['transaction_id']],
 	['cluster_preflight',['intent','request_id','maintenance']], ['cluster_apply',['transaction_id','approval','takeover']],
@@ -561,6 +561,15 @@ function summary(page,data,c,refresh,writable) {
 				return refresh();
 			});
 		},!writable)
+	]));
+	if(page==='advanced' && id.role==='root')result.push(widgets.section(_('Configuration signing key'),[
+		E('p',{'class':'mm-muted'},[_('Configuration responses use a separate key. Connected devices learn rotations automatically.')]),
+		E('p',{},[_('Key generation: %s').format(c.signing_epoch || 0)]),
+		button(_('Rotate signing key'),function() {
+			return call('signing_rotate',c.signing_epoch,requestId()).then(function() {
+				ui.addNotification(null,E('p',{},[_('Configuration signing key rotated.')]));return refresh();
+			});
+		},!writable || !c.signing_epoch)
 	]));
 	if(page==='nodes'){
 		var stop=lifecycle.stopStatus(data,refresh,writable);if(stop)result.push(stop);

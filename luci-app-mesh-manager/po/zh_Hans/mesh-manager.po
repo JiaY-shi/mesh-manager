@@ -2702,3 +2702,18 @@ msgstr "立即续期证书"
 
 msgid "Certificate renewal requested. Connected devices will renew automatically."
 msgstr "已请求续期，已连接的设备将自动完成。"
+
+msgid "Configuration signing key"
+msgstr "配置签名密钥"
+
+msgid "Configuration responses use a separate key. Connected devices learn rotations automatically."
+msgstr "配置响应使用独立密钥，设备连接后自动获取轮换后的密钥。"
+
+msgid "Key generation: %s"
+msgstr "密钥代次：%s"
+
+msgid "Rotate signing key"
+msgstr "轮换签名密钥"
+
+msgid "Configuration signing key rotated."
+msgstr "配置签名密钥已轮换。"

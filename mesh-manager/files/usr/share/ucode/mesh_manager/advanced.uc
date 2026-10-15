@@ -39,7 +39,9 @@ import {require_authority} from './authority.uc';
 import {public_migration} from './migration_model.uc';
 import {anchor_roster} from './anchor_roster.uc';
 import {certificate_renewal} from './certificate_renewal.uc';
+import {config_signing} from './config_signing.uc';
 const certificates=certificate_renewal(durable);
+const signing=config_signing(durable);
 
 import { agent_local } from './agent_local.uc';
 import { sanitize_report } from './agent_report.uc';
@@ -384,6 +386,7 @@ export function frozen_cluster_status(i, view) {
 			previous_name:row.previous_name,name:row.name,version:row.version,status:row.status,timestamp:row.timestamp}));
 	}
 	let identity = frame.identity;
+	result.signing_epoch=identity?.role=='root' ? state?.config_signing?.epoch || 0 : identity?.signing?.epoch || 0;
 	result.migration=identity?.role=='root' ? public_migration(state?.migration,full ? null : false) : public_migration(identity?.migration,false);
 	result.local_repair = identity?.agent?.repair ? {
 		id: identity.agent.transaction, status: identity.agent.status,
@@ -545,6 +548,7 @@ export function advanced_dispatch(method, args) {
 		if (method == 'mesh_stop_cancel') return cluster.lifecycle.cancel(args.request_id);
 
 		if (method == 'certificate_renew') return certificates.request(args.node_id);
+		if (method == 'signing_rotate') return signing.rotate(args.expected_epoch,args.request_id);
 		if (method == 'node_revoke') return pair.revoke(args.node_id);
 		if (method == 'node_rename_preview') return pair.rename_preview(args.node_id,args.name);
 		if (method == 'node_rename') return pair.rename(args);
@@ -592,6 +596,8 @@ export function peer_request(identity, mode, request, source, destination, certi
 		let access=control_ingress(durable.load('identity.json'),pair.state(),identity,request,
 			destination,durable.boot(),durable.now());
 		let reply=ingress_response(access,cluster.peer(identity, request));
+		let signer=pair.state().config_signing;
+		if(request.action=='poll' && signer && request.signing_epoch!=signer.epoch)reply.signing_update=true;
 		if(member?.authorized===true && request.action=='poll' && request.credentials!=null)
 			reply.credentials=certificates.peer(identity,certificate,request.credentials);
 		let roster=anchor_roster(local_identity,pair.state(),identity,crypto.fingerprint(durable.read('device.crt')));
@@ -615,6 +621,7 @@ export function agent_tick() {
 			let service=migration();durable.locked(()=>service.tick_locked());service.handover();return;
 		}
 		durable.locked(() => services().cluster.tick());
+		durable.locked(() => signing.ensure());
 		durable.locked(() => certificates.root_tick());
 		try {
 			let local = durable.load('state.json');

@@ -169,6 +169,18 @@ static uc_value_t *key_fingerprint(uc_vm_t *vm, size_t nargs)
 	return result;
 }
 
+static uc_value_t *public_key(uc_vm_t *vm, size_t nargs)
+{
+	uc_value_t *slots[1], *result = NULL;
+	EVP_PKEY *key = read_key(string_arg(vm, nargs, 0, &slots[0]));
+	BIO *bio = BIO_new(BIO_s_mem());
+	if (key && bio && EVP_PKEY_base_id(key) == EVP_PKEY_ED25519 && PEM_write_bio_PUBKEY(bio, key))
+		result = bio_string(bio);
+	BIO_free(bio);
+	EVP_PKEY_free(key);
+	return result;
+}
+
 static int subject(X509_NAME *name, const char *id)
 {
 	return identity(id) && X509_NAME_add_entry_by_NID(name, NID_commonName, MBSTRING_ASC,
@@ -503,6 +515,36 @@ static int hex_nibble(char c)
 	return c >= '0' && c <= '9' ? c - '0' : c >= 'a' && c <= 'f' ? c - 'a' + 10 : -1;
 }
 
+static int verify_message(EVP_PKEY *key, uc_value_t *data, const char *signature)
+{
+	unsigned char bytes[64];
+	if (!key || EVP_PKEY_base_id(key) != EVP_PKEY_ED25519 || !message_value(data) ||
+	    !signature || strlen(signature) != 128) return 0;
+	for (size_t i = 0; i < sizeof(bytes); i++) {
+		int a = hex_nibble(signature[i * 2]), b = hex_nibble(signature[i * 2 + 1]);
+		if (a < 0 || b < 0) return 0;
+		bytes[i] = (unsigned char)((a << 4) | b);
+	}
+	EVP_MD_CTX *ctx = EVP_MD_CTX_new();
+	int ok = ctx && EVP_DigestVerifyInit(ctx, NULL, NULL, NULL, key) == 1 &&
+		EVP_DigestVerify(ctx, bytes, sizeof(bytes), (const unsigned char *)ucv_string_get(data),
+			ucv_string_length(data)) == 1;
+	EVP_MD_CTX_free(ctx);
+	return ok;
+}
+
+static uc_value_t *message_verify_key(uc_vm_t *vm, size_t nargs)
+{
+	uc_value_t *slots[2];
+	const char *pem = string_arg(vm, nargs, 0, &slots[0]), *signature = string_arg(vm, nargs, 2, &slots[1]);
+	BIO *bio = pem ? BIO_new_mem_buf(pem, (int)strlen(pem)) : NULL;
+	EVP_PKEY *key = bio ? PEM_read_bio_PUBKEY(bio, NULL, NULL, NULL) : NULL;
+	int ok = verify_message(key, uc_fn_arg(1), signature);
+	EVP_PKEY_free(key);
+	BIO_free(bio);
+	return ucv_boolean_new(ok);
+}
+
 static uc_value_t *message_verify_time(uc_vm_t *vm, size_t nargs, bool explicit_time)
 {
 	int64_t wall = 0;
@@ -517,32 +559,21 @@ static uc_value_t *message_verify_time(uc_vm_t *vm, size_t nargs, bool explicit_
 	uc_value_t *data = uc_fn_arg(3);
 	uc_value_t *string_values[5];
 	const char *signature = string_arg(vm, nargs, 4, &string_values[4]);
-	unsigned char bytes[64];
 	if (!message_value(data) || !signature || strlen(signature) != 128)
 		return ucv_boolean_new(false);
-	for (size_t i = 0; i < sizeof(bytes); i++) {
-		int a = hex_nibble(signature[i * 2]), b = hex_nibble(signature[i * 2 + 1]);
-		if (a < 0 || b < 0) return ucv_boolean_new(false);
-		bytes[i] = (unsigned char)((a << 4) | b);
-	}
 	X509 *issuer = read_cert(string_arg(vm, nargs, 0, &string_values[0])), *leaf = read_cert(string_arg(vm, nargs, 1, &string_values[1]));
 	const char *id = string_arg(vm, nargs, 2, &string_values[2]);
 	X509_STORE *store = X509_STORE_new();
 	X509_STORE_CTX *chain = X509_STORE_CTX_new();
 	EVP_PKEY *pub = leaf ? X509_get_pubkey(leaf) : NULL;
-	EVP_MD_CTX *ctx = EVP_MD_CTX_new();
-	int ok = issuer && leaf && store && chain && ctx && pub && X509_check_ca(issuer) > 0 &&
+	int ok = issuer && leaf && store && chain && pub && X509_check_ca(issuer) > 0 &&
 		signing_leaf(leaf, id) && X509_STORE_add_cert(store, issuer) == 1 &&
 		X509_STORE_CTX_init(chain, store, leaf, NULL) == 1;
 	/* Bootstrap verifies a fresh signed controller time. Dates remain checked
 	 * at that exact time; ordinary message and TLS validation use system time. */
 	if (ok && explicit_time)
 		X509_VERIFY_PARAM_set_time(X509_STORE_CTX_get0_param(chain), (time_t)wall);
-	ok = ok && X509_verify_cert(chain) == 1 &&
-		EVP_DigestVerifyInit(ctx, NULL, NULL, NULL, pub) == 1 &&
-		EVP_DigestVerify(ctx, bytes, sizeof(bytes), (const unsigned char *)ucv_string_get(data),
-			ucv_string_length(data)) == 1;
-	EVP_MD_CTX_free(ctx);
+	ok = ok && X509_verify_cert(chain) == 1 && verify_message(pub, data, signature);
 	EVP_PKEY_free(pub);
 	X509_STORE_CTX_free(chain);
 	X509_STORE_free(store);
@@ -565,6 +596,7 @@ static const uc_function_list_t functions[] = {
 	{ "identifier", identifier },
 	{ "sha256", hash }, { "hmac", hmac }, { "constant_equal", constant_equal }, { "keypair", keypair },
 	{ "key_fingerprint", key_fingerprint }, { "csr", csr }, { "ca", ca },
+	{ "public_key", public_key }, { "message_verify_key", message_verify_key },
 	{ "sign", sign }, { "verify_leaf", verify_leaf }, { "fingerprint", fingerprint },
 	{ "certificate_key_fingerprint", certificate_key_fingerprint },
 	{ "normalize_cert", normalize_cert }, { "certificate_identity", certificate_identity },

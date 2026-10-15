@@ -50,6 +50,7 @@
           "controller_init",
           "node_revoke",
           "certificate_renew",
+					"signing_rotate",
           "node_rename",
           "node_rename_preview",
           "cluster_preflight",

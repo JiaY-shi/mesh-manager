@@ -48,7 +48,14 @@ export function exchange(binding, request, enrollment, device, timeout_ms, recor
 	}
 	if (reply?.ok !== true)
 		die((reply?.error?.code || 'peer_error') + ': Controller rejected request');
-	let data = enrollment ? reply.data : unseal(binding, request, reply.data, { read, time });
+	let signer, pinned=request.action!='probe' && !enrollment ? load('identity.json')?.signing : null;
+	let data = enrollment ? reply.data : unseal({...binding,signing:pinned}, request, reply.data,
+		{ read, time, signer:value=>{signer=value;} });
+	// Only the authenticated poll consumer persists a signer, under its lock.
+	if(!enrollment && request.action=='poll') {
+		delete data.signer_pin;
+		if(signer)data={...data,signer_pin:signer};
+	}
 	if (!enrollment && request.action!='probe') record_contact(binding);
 	// Private first-configuration adapters retain the actual transmitted nonce
 	// and signed bytes. No new public response fields or unsigned authority.

@@ -9,6 +9,7 @@ import {allocate_lease,adopt_leases,require_lease,lease_table} from './control_l
 import {require_anchor} from './authority.uc';
 import {migration_id,migration_binding,migration_pending,public_migration,transfer_state,CHUNK_SIZE,TRANSFER_LIMIT} from './migration_model.uc';
 import {migration_budget as native_budget} from './migration_budget.uc';
+import {public_signer} from './config_signing.uc';
 
 const FINAL=['complete','partial','failed','rolled_back','cancelled','expired'];
 const LOCAL_FINAL=['committed','rolled_back','rollback_conflict','expired'];
@@ -246,6 +247,7 @@ export function migration_service(io) {
   root.authority_fence={id:m.id,epoch:m.epoch,target:m.target,token:m.token};root.anchor=clone(m.anchor);
   root.migration={id:m.id,phase:'transferring',source:m.source,target:m.target,epoch:m.epoch,
    anchor:clone(m.anchor),binding:clone(m.binding),token:m.token};identity_replace(root);
+  m.config_signing_hash=s.config_signing ? crypto.sha256(sprintf('%J',s.config_signing)) : null;
   m.fenced=true;m.phase='transferring';m.material=material;m.hash=crypto.sha256(material);save(s);
  }
  function tick_locked() {
@@ -295,7 +297,12 @@ export function migration_service(io) {
     die('storage_conflict: Source authority changed during handover verification');
    // Erase copied signing material before key retirement, then publish AP role.
    // After a crash, the fresh target proof permits retirement to resume.
-   if(current.material){current.ca_hash=crypto.sha256(io.read('network-ca.key'));delete current.material;current.phase='handover';save(s);}
+   if(current.material){
+    if((s.config_signing ? crypto.sha256(sprintf('%J',s.config_signing)) : null)!==current.config_signing_hash)
+     die('storage_conflict: Source configuration signing key changed before retirement');
+    current.signing_public=public_signer(s,root.network_id);delete s.config_signing;
+    current.ca_hash=crypto.sha256(io.read('network-ca.key'));delete current.material;current.phase='handover';save(s);
+   }
    let key=io.read('network-ca.key');
    if(key!=null) {
     if(crypto.sha256(key)!=current.ca_hash)die('storage_conflict: Source signing key changed before retirement');
@@ -304,6 +311,7 @@ export function migration_service(io) {
    root.role='ap';root.binding=clone(m.binding);root.authority_epoch=m.epoch;root.anchor=clone(m.anchor);
    root.ca_fingerprint=m.binding.ca_fingerprint;
    root.cluster_version=m.version;root.overrides=clone(m.root.settings);delete root.agent;
+   if(current.signing_public)root.signing=clone(current.signing_public);
    root.migration={id:m.id,phase:'switched',epoch:m.epoch,source:m.source,target:m.target,
     anchor:clone(m.anchor),binding:clone(m.binding),token:m.token};
    s.roster_authority=clone(m.binding);save(s);identity_replace(root);
