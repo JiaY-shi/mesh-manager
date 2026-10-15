@@ -17,6 +17,7 @@ over Ethernet or wirelessly using the controller's Wi-Fi name and password.
 - Automatic controller discovery, enrollment, and configuration synchronization.
 - Network topology, node status, backhaul quality, clients, and change history.
 - Configuration previews and automatic rollback when health confirmation fails.
+- Automatic Guest VLAN and subnet allocation, with separate credentials and access policies.
 - Restore original managed settings when disabling Mesh and rejoin after leaving.
 
 ## Installation
@@ -140,6 +141,19 @@ After restoration, access the device at its original LAN management address.
 Resolve any reported external configuration conflicts before continuing.
 
 802.11k/v/r behavior depends on client support; clients decide when to roam.
+
+### Guest networks
+
+On the controller, open **Wireless → Advanced settings** to enable Guest and set
+a separate password. Use `auto` for VLAN and subnet allocation, or select an
+unused VLAN and a private `/24` subnet with gateway address `.1`. Guest requires
+a managed routing gateway, which provides DHCP and firewall policies; APs
+transparently carry its tagged traffic.
+
+Guest defaults to Internet access, client isolation on the same AP, and restricted
+access to the main LAN. You can disable Internet access or client isolation,
+allow mutual LAN access, or allow selected LAN-to-Guest service ports. Write
+port exceptions as `TCP:80,443;UDP:123`.
 
 ## License
 

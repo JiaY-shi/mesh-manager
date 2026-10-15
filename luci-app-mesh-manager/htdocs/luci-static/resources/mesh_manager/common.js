@@ -562,7 +562,7 @@ return baseclass.extend({
 				renderStatus(data);
 				poll.add(refresh, 3);
 				return E('div', { 'class': 'mm-page', 'data-mm-view': page, 'aria-label': _('Mesh Manager') }, [
-					E('link', { rel: 'stylesheet', href: L.resource('mesh_manager/mesh-manager.css')+'?v=20260930-lifecycle-1' }),
+					E('link', { rel: 'stylesheet', href: L.resource('mesh_manager/mesh-manager.css')+'?v=20261015-guest-1' }),
 					tabs ? E('span') : title,
 					tabs ? E('span') : description,
 					error, panel, forms

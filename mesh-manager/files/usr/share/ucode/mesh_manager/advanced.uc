@@ -15,7 +15,7 @@ import { handoff_tick } from './handoff_runtime.uc';
 import { cluster_service, public_active } from './cluster.uc';
 import { validate_overrides, validate_controller_management, local_intent } from './extended.uc';
 import { canonical, clone, equal, public_intent } from './model.uc';
-import { dispatch as local_dispatch, snapshot, status_view, observe_clients, publish_observation,
+import { dispatch as local_dispatch, snapshot, guest_network_snapshot, status_view, observe_clients, publish_observation,
 	root_bootstrap_wifi } from './runtime.uc';
 import { discover, discover_wireless } from './discovery.uc';
 import { onboard_start, onboard_status, onboard_stop, onboarding_device,
@@ -155,6 +155,7 @@ function io() {
 	return {
 		...durable,
 		local,
+		network_snapshot: guest_network_snapshot,
 		exchange,
 		join_transport: onboarding_transport,
 		join_capture: onboarding_scope_material,

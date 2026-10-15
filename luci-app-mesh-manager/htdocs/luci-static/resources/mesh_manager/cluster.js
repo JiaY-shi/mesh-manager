@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 'use strict';
+'require mesh_manager.network_extensions as extensions';
 'require mesh_manager.history as history';
 'require mesh_manager.slow_rpc as slow_rpc';
 'require baseclass';
@@ -372,6 +373,7 @@ function setup(data,c,refresh,writable) {
 }
 function unifiedForm(data,c,refresh,writable,page) {
 	var current=c.intent || {}, w=current.wifi || {}, r=w.roaming || {}, b=current.backhaul || {};
+	var networks=extensions.form(current,{field:field,input:input,checkbox:checkbox,select:select});
 	var enabled=checkbox(w.enabled !== false),ssid=input(w.ssid || data.intent && data.intent.wifi.ssid || ''),key=input('','password'),enc=select([['psk2','WPA2-PSK'],['sae-mixed','WPA2/WPA3']],w.encryption || 'psk2');
 	var k=checkbox(r.k !== false),v=checkbox(r.v !== false),ft=checkbox(r.r !== false),steer=checkbox(r.steering),domain=input(r.domain || '4f57');
 	var customPolicy=checkbox(!!r.policy),policy=r.policy || {scan_rssi:-70,trigger_rssi:-75,signal_difference:8,interval_seconds:60};
@@ -403,8 +405,9 @@ function unifiedForm(data,c,refresh,writable,page) {
 		if(customPolicy.checked) {
 			roaming.policy={};Object.keys(thresholds).forEach(function(name) { roaming.policy[name]=Number(thresholds[name].value); });
 		}
+		var extra=networks.value();
 		return {schema:2,name:current.name || c.identity.name || 'Mesh',wifi:{enabled:enabled.checked,ssid:ssid.value,encryption:enc.value,key:key.value || null,
-			roaming:roaming},backhaul:path,networks:current.networks || []};
+			roaming:roaming},backhaul:path,networks:page==='wireless' ? extra.networks : current.networks || []};
 	}
 	function needsMaintenance(path) {
 		return !!current.backhaul && (path.key!=null || ['mode','mesh_id','channel','htmode','control_vlan'].some(function(name) { return path[name]!==b[name]; }));
@@ -444,7 +447,7 @@ function unifiedForm(data,c,refresh,writable,page) {
 		field(_('Channel width'),width,_('All backhaul radios must support this width; a higher width does not guarantee higher throughput.'))
 	];
 	var editor=E('fieldset',{'class':'mm-editor'},[
-		E('div',{'class':'mm-form mm-basic-form'},basic),widgets.details(_('Advanced settings'),[E('div',{'class':'mm-form'},advanced)].concat(page==='wireless' ? [policyFields] : []))
+		E('div',{'class':'mm-form mm-basic-form'},basic),widgets.details(_('Advanced settings'),[E('div',{'class':'mm-form'},advanced)].concat(page==='wireless' ? [policyFields,networks.element] : []))
 	]);
 	var pendingId=null,reviewedId=null,sending=false,waiting=false,submissionError=null,latest=c,initialVersion=c.version || 0;
 	var saveState=E('span',{'class':'mm-save-state','role':'status','aria-live':'polite'});

@@ -2483,3 +2483,45 @@ msgstr "后台服务正在停止"
 
 msgid "Updating background services"
 msgstr "后台服务调整中"
+
+msgid "Allow mutual access with LAN"
+msgstr "允许与主 LAN 互访"
+
+msgid "Business subnet"
+msgstr "业务子网"
+
+msgid "Client isolation"
+msgstr "客户端隔离"
+
+msgid "Isolate wireless clients on the same AP. Guest access to LAN is controlled separately."
+msgstr "隔离同一 AP 上的无线客户端。Guest 对主 LAN 的访问由独立策略控制。"
+
+msgid "Enable network"
+msgstr "启用网络"
+
+msgid "Guest network"
+msgstr "访客网络"
+
+msgid "Internet access"
+msgstr "允许上网"
+
+msgid "LAN access exceptions"
+msgstr "主 LAN 访问例外"
+
+msgid "Optional LAN-to-network service ports, for example TCP:80,443;UDP:123. Used when mutual LAN access is disabled."
+msgstr "可选的主 LAN 到此网络的服务端口，例如 TCP:80,443;UDP:123。用于未开启主 LAN 互访时。"
+
+msgid "Use an independent password for this network. Leave empty to keep its existing password."
+msgstr "为此网络使用独立密码。留空以保留其现有密码。"
+
+msgid "Use auto or a private /24 subnet with gateway address .1. DHCP runs on the routing gateway."
+msgstr "填写 auto 或网关地址为 .1 的私有 /24 子网。DHCP 由路由网关提供。"
+
+msgid "Use auto to allocate a free VLAN. The control VLAN is reserved."
+msgstr "填写 auto 以分配空闲 VLAN。管理控制 VLAN 为保留值。"
+
+msgid "VLAN ID"
+msgstr "VLAN ID"
+
+msgid "Allow traffic in both directions between this network and the main LAN. Guest client isolation is configured separately."
+msgstr "允许此网络与主 LAN 双向互访。访客客户端隔离单独配置。"

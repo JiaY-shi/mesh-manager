@@ -7,6 +7,7 @@ import { port_tokens, uplink_conflicts } from './topology.uc';
 import { private_address } from './identity.uc';
 import { steering_plan, steering_policy_errors } from './roaming.uc';
 import { backhaul_mode } from './radio_modes.uc';
+import { network_errors, network_plan } from './network_extensions.uc';
 
 export const CONTROLLER_ADDRESS_MESSAGE = 'Coordinated controller address migration is not implemented; preserve the existing static LAN address';
 export function validate_controller_management(local, address, lan) {
@@ -183,7 +184,7 @@ export function validate_extended(i) {
 	)
 		error('Invalid independent roaming policy');
 	for (let message in steering_policy_errors(r?.policy)) error(message);
-	if (i.networks != null && type(i.networks) != 'array') error('Networks must be an array');
+	for (let message in network_errors(i.networks)) error(message);
 	return errors;
 }
 export function compile_extended(i, snapshot, cap, owned, legacy, resume_steering) {
@@ -239,6 +240,11 @@ export function compile_extended(i, snapshot, cap, owned, legacy, resume_steerin
 	}
 	for (let name in keys(virtual.wireless)) {
 		let s = virtual.wireless[name];
+		if (s.type == 'wifi-iface' && match(name, /^mm_(guest|iot)_/) &&
+			length(filter(owned || [], o => o.config == 'wireless' && o.section == name && o.option == null && equal(s, o.after)))) {
+			s.values.disabled = '1';
+			continue;
+		}
 		if (s.type != 'wifi-iface' || s.values.mode != 'mesh' || s.values.disabled == '1') continue;
 		if (
 			name == 'mm_mesh0' &&
@@ -584,8 +590,13 @@ export function compile_extended(i, snapshot, cap, owned, legacy, resume_steerin
 			field('wireless', owner.section, owner.option, clone(owner.before), 'restore local radio tuning');
 		}
 	}
-	if (length(i.networks || []))
-		fail('network_backend', 'Additional networks require VLAN backend preflight');
+	if (!i.wifi.enabled && length(filter(i.networks || [], n => n.enabled)))
+		for (let radio in i.wifi.radios)
+			field('wireless', radio, 'disabled', '0', 'enable selected radio');
+	let networks = network_plan(i, snapshot, cap, owned, ports);
+	errors = [...errors, ...networks.errors];
+	extra = [...extra, ...networks.ops];
+	warnings = [...warnings, ...networks.warnings];
 	let ops = [];
 	for (let op in [...plan.ops, ...extra]) {
 		let same = filter(

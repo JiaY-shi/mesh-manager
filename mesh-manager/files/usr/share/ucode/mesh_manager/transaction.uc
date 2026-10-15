@@ -273,7 +273,7 @@ export function engine(io) {
 	function candidate(intent, context) {
 		if (context) validate_settings(context.record);
 		let s = state(), snapshot = io.snapshot();
-		let plan = compile(intent, snapshot, io.capabilities(snapshot), s.owned);
+		let plan = compile(intent, snapshot, io.capabilities(snapshot, false, intent), s.owned);
 		if (length(drift(s, snapshot)))
 			push(plan.errors, {
 				code: 'ownership_conflict',
@@ -332,7 +332,7 @@ export function engine(io) {
 		if (enabled) {
 			if (s.paused !== true || !s.saved_intent) die('invalid_state: Mesh is not disabled');
 			intent ||= s.saved_intent;
-			let plan = compile(intent, snapshot, io.capabilities(snapshot), s.owned, s.saved_steering_managed === true);
+			let plan = compile(intent, snapshot, io.capabilities(snapshot, false, intent), s.owned, s.saved_steering_managed === true);
 			return reviewed(s, snapshot, intent, plan, 'mesh_enable');
 		}
 		return reviewed(s, snapshot, null, release_plan(s, snapshot), 'mesh_disable');
@@ -350,7 +350,7 @@ export function engine(io) {
 				else baseline[op.config][op.section].values[op.option] = clone(op.after);
 			}
 		}
-		let compiled = compile(intent, baseline, io.capabilities(snapshot), s.owned),
+		let compiled = compile(intent, baseline, io.capabilities(snapshot, false, intent), s.owned),
 			errors = clone(compiled.errors), ops = [], expected_owned = clone(s.owned);
 		function fail(op) {
 			push(errors, { code: 'repair_scope_conflict',
@@ -442,7 +442,7 @@ export function engine(io) {
 			die('ownership_conflict: Managed fields have external changes');
 		if (release) {
 			plan = release_plan(s, snapshot);
-		} else plan = compile(intent, snapshot, io.capabilities(snapshot), s.owned,
+		} else plan = compile(intent, snapshot, io.capabilities(snapshot, false, intent), s.owned,
 			mesh_enabled === true && s.saved_steering_managed === true);
 		if (length(plan.errors))
 			die(
@@ -611,8 +611,9 @@ export function engine(io) {
 				try {
 					let failed = map(filter(io.health(a)?.checks || [], c => c.ok !== true &&
 						(index(['management_interface', 'management_protocol', 'management_address',
-							'expected_configuration', 'wan_interface', 'backhaul_mesh', 'backhaul_peer_acl'], c.name) >= 0 ||
-							type(c.name) == 'string' && length(c.name) <= 64 && match(c.name, /^ap_radio[0-9]+$/))), c => c.name);
+							'expected_configuration', 'wan_interface', 'backhaul_mesh', 'backhaul_peer_acl',
+                            'guest_interface','guest_single_uplink','guest_dhcp'], c.name) >= 0 ||
+							type(c.name) == 'string' && length(c.name) <= 64 && match(c.name, /^(ap|guest_ap)_radio[0-9]+$/))), c => c.name);
 					if (length(failed)) a.failure += ': ' + join(', ', slice(failed, 0, 16));
 				} catch (e) {}
 			}

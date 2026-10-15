@@ -11,6 +11,7 @@ import { json_reader } from './read_cache.uc';
 import { engine, owned_matches } from './transaction.uc';
 import { clone, equal, canonical, static_ipv4_matches } from './model.uc';
 import { value } from './compiler.uc';
+import { network_inventory } from './network_extensions.uc';
 import { request } from './bus.uc';
 import { mesh_acl_enabled } from './backhaul.uc';
 import { restore_checks as restoration_checks } from './restore.uc';
@@ -27,6 +28,8 @@ import { cached_wireless_features } from './capability_features.uc';
 import { wireless_link_compatibility } from './wireless_compatibility.uc';
 import { handoff_check, handoff_stamp } from './first_handoff.uc';
 import { radio_modes } from './radio_modes.uc';
+import { business_dhcp_ready } from './business_health.uc';
+import { extension_bridge, extension_device } from './network_extensions.uc';
 
 const CONFIGS = ['network', 'wireless', 'dhcp', 'firewall', 'usteer'];
 const STATE = '/etc/mesh-manager/state.json';
@@ -122,6 +125,11 @@ function call(connection, object, method, args) {
 		return null;
 	}
 }
+export function guest_network_snapshot() {
+	let current=snapshot(),b=bus();
+	current.business_inventory=network_inventory(call(b,'network.interface','dump'));
+	b?.disconnect();return current;
+}
 function settings() {
 	let c = uci(),
 		result = {};
@@ -157,7 +165,7 @@ function wireless_features(cached) {
 	return { hostapd, mesh_control, sae:hostapd && sae==0, ft:hostapd && ft==0, mesh:wpa && mesh==0,
 		control_status, probe_errors, state:length(probe_errors)?'unavailable':'ready' };
 }
-export function capabilities(snapshot, cached) {
+export function capabilities(snapshot, cached, intent) {
 	let identity_path = '/etc/mesh-manager/identity.json', identity_stat = fs.lstat(identity_path), controller_identity = null;
 	if (identity_stat) {
 		if (identity_stat.type != 'file' || identity_stat.uid != 0 || identity_stat.mode & 0077 || identity_stat.size > 1024 * 1024)
@@ -223,6 +231,8 @@ export function capabilities(snapshot, cached) {
 	result.background_instances=background.instances;
 	result.background_actual_instances=observed.instances;
 	if (!cached && result.usteer) result.usteer_support = steering_capabilities(b);
+	if (!cached && length(filter(intent?.networks || [],n=>n.enabled)))
+		result.business_inventory=network_inventory(call(b,'network.interface','dump'));
 	b?.disconnect();
 	return result;
 }
@@ -378,6 +388,40 @@ function health(active) {
 					call(b, 'hostapd.' + (ap?.ifname || ''), 'get_status')?.status == 'ENABLED'
 			});
 		}
+	}
+	if (active.kind != 'release' && active.intent?.schema == 2) {
+		let wireless = call(b, 'network.wireless', 'status') || {},
+			radios = active.intent.wifi.radios;
+		for (let network in active.intent.networks || []) {
+			if (!network.enabled) continue;
+			let name = 'mm_' + network.id, status = call(b, 'network.interface.' + name, 'status'),
+				bridge = extension_bridge(network.id);
+			push(checks, { name: network.id + '_interface', ok: status?.up === true && status.device == bridge &&
+				fs.access('/sys/class/net/' + bridge + '/bridge') && (active.intent.gateway != 'router' ||
+				static_ipv4_matches(current.network[name]?.values || {}, status['ipv4-address'])) });
+			if (active.intent.gateway=='router') {
+                let instances=call(b,'service','list',{name:'dnsmasq'})?.dnsmasq?.instances;
+                push(checks,{name:network.id+'_dhcp',ok:business_dhcp_ready(network.id,network.subnet,current,instances,path=>{
+                    let before=fs.lstat(path);if(before?.type!='file' || before.uid!=0 || before.size>131072)return null;
+                    let raw=fs.readfile(path),after=fs.lstat(path);
+                    return before.inode==after?.inode && before.size==after.size ? raw : null;
+                })});
+            }
+			for (let radio in radios) {
+				let ap = filter(wireless[radio]?.interfaces || [], iface => iface.section == name + '_' + radio)[0];
+				push(checks, { name: network.id + '_ap_' + radio, ok: wireless[radio]?.up === true &&
+					call(b, 'hostapd.' + (ap?.ifname || ''), 'get_status')?.status == 'ENABLED' });
+			}
+			if (!active.intent.controller && active.intent.data_root !== true) {
+				let attached = [];
+				for (let path in ['w', 'm']) {
+					let master = fs.readlink('/sys/class/net/' + extension_device(network.id, path) + '/master');
+					if (master && fs.basename(master) == bridge) push(attached, path);
+				}
+				push(checks, { name: network.id + '_single_uplink', ok: length(attached) == 1 });
+			}
+		}
+
 	}
 	if (active.kind != 'release' && active.intent?.schema == 2 && active.intent.backhaul?.mode != 'wired') {
 		let wireless = call(b, 'network.wireless', 'status') || {};

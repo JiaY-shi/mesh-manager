@@ -172,12 +172,16 @@ export function select_path(previous, observed, now) {
 	return { ...s, target };
 }
 
-export function reconcile(io, target, bridge, links) {
+export function reconcile(io, target, bridge, links, business) {
+	let token=business=='guest' ? 'g' : null,
+		business_path=token!=null && bridge=='br-mm-'+token &&
+			links.wired=='mm-'+token+'w' && links.wireless=='mm-'+token+'m';
 	if (
 		index(['none', 'wired', 'wireless'], target) < 0 ||
+		business!=null && !business_path ||
 		!match(bridge || '', /^[a-zA-Z0-9_.-]{1,15}$/) ||
 		!match(links.wired || '', /^[a-zA-Z0-9_.-]{1,15}$/) ||
-		links.wireless != 'mm-mesh0' ||
+		!business_path && links.wireless != 'mm-mesh0' ||
 		links.wired == links.wireless
 	)
 		die('invalid_path: Invalid managed bridge path');

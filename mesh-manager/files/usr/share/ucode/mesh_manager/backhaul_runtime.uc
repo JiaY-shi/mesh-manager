@@ -8,6 +8,7 @@ import { lan_bridge } from './topology.uc';
 import { active_backhaul_intent, block_wireless, wireless_guard, bridge_step, ensure_mesh_acl, mesh_peer_present, mesh_stations, reconcile, wired_trial_window, path_proof, continuing_observation } from './backhaul.uc';
 import { probe_control, probe_management } from './peer_transport.uc';
 import * as durable from './durable.uc';
+import { reconcile_business } from './business_runtime.uc';
 
 const RUNTIME = '/var/run/mesh-manager-backhaul.json';
 const WIRELESS = 'mm-mesh0';
@@ -30,6 +31,11 @@ function set_master(name, bridge, owner) {
 	if (bridge) push(args, 'master', bridge);
 	else push(args, 'nomaster');
 	if (system(args, 3000) != 0) die('bridge_error: Link master change failed');
+}
+function business_paths(journal, intent, active) {
+	reconcile_business(journal, intent, active, { master,
+		detach: (name, bridge) => set_master(name, null, bridge),
+		attach: (name, bridge) => set_master(name, bridge, bridge) });
 }
 
 function peer_command(bus, name, command, mac) {
@@ -193,6 +199,7 @@ export function backhaul_tick() {
 		let verified = carrier && attached ? authenticated_path(identity.binding,'mm-cw') : false;
 		if (carrier && attached && verified !== true) verified = authenticated_management(identity.binding);
 		let proof = path_proof(verified, prior?.wired_verified_at, now, carrier && attached);
+		business_paths(journal, state.intent, carrier && attached ? 'wired' : 'none');
 		write_status({boot,mode,binding,sampled_at:now,wired_verified_at:proof.at,
 			active:carrier && attached ? 'wired' : 'none',carrier,wired:proof.usable,wireless:false,observed:time(),quality:null});
 		return;
@@ -245,6 +252,7 @@ export function backhaul_tick() {
 		// not suppress this bounded trial after the stable-carrier hold;
 		// otherwise an AP on such a port can never recover wired backhaul.
 		try {
+			business_paths(journal, state.intent, 'none');
 			trial_changed = reconcile(io, 'wired', bridge, links);
 			if (!wait_forwarding(links.wired, bridge))
 				trial_error = 'bridge_not_forwarding';
@@ -269,6 +277,7 @@ export function backhaul_tick() {
 	}
 	let result = bridge_step(io, prior, { boot, carrier, wired, wireless, wired_fresh: wired_proof.verified },
 		mode, now, bridge, links);
+	business_paths(journal, state.intent, result.active);
 	write_status({ ...result, binding, sampled_at: now,
 		wired_verified_at: wired_proof.at, wireless_verified_at: wireless_proof.at, carrier_since: trial.carrier_since,
 		trial_after: trial.trial_after, trial_result: trial_result || prior?.trial_result || null,

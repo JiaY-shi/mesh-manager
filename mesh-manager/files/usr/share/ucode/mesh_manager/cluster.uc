@@ -10,6 +10,7 @@ import { repair_service, repair_pending, cluster_busy, controller_repair_busy } 
 import { lifecycle_service, lifecycle_busy } from './lifecycle.uc';
 import { handoff_receipt } from './handoff_controller.uc';
 import { restored_member } from './restoration.uc';
+import { resolve_networks, network_errors } from './network_extensions.uc';
 
 function wireless_auto_recovery(before, after) {
 	if (before?.backhaul?.mode != 'wireless' || after?.backhaul?.mode != 'auto') return false;
@@ -90,6 +91,15 @@ export function cluster_service(io, pairing) {
 		let root = pairing.root(),
 			s = load();
 		root = settings_identity(root, io.load('state.json'));
+		intent = clone(intent);
+		for (let n in type(intent?.networks) == 'array' ? intent.networks : [])
+			if (type(n) == 'object' && n.key == null)
+				n.key = filter(s.intent?.networks || [], old => old.id == n.id)[0]?.key;
+		if (length(network_errors(intent?.networks))) die('invalid_network: Invalid additional network settings');
+		if (length(filter(intent?.networks || [], n => n.enabled))) {
+			if (!io.network_snapshot) die('backend_unavailable: Fresh network inventory is unavailable');
+			intent = resolve_networks(intent, io.network_snapshot(), io.load('state.json')?.owned || []);
+		}
 		validate_controller_management(root.overrides, root.address);
 		if (controller_repair_busy(io)) die('busy: Controller configuration repair is pending');
 		if (io.local.repair_status?.()?.paused === true) die('mesh_disabled: Enable controller Mesh first');
