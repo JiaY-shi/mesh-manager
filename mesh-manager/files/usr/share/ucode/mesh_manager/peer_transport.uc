@@ -30,7 +30,8 @@ export function exchange(binding, request, enrollment, device, timeout_ms, recor
 		enrollment ? '-' : '/etc/mesh-manager/device.key',
 		binding.controller_id
 	];
-	if (binding.controller_certificate!=null) push(argv,device || '-',binding.controller_certificate);
+	if (binding.controller_key!=null) push(argv,device || '-','key:'+binding.controller_key);
+	else if (binding.controller_certificate!=null) push(argv,device || '-',binding.controller_certificate);
 	else if (device) push(argv, device);
 	if (timeout_ms != null && (type(timeout_ms) != 'int' || timeout_ms < 1))
 		die('invalid_timeout: Peer exchange requires a positive finite budget');

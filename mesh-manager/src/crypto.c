@@ -255,8 +255,28 @@ done:
 	return result;
 }
 
+static int leaf_times(X509 *cert, X509 *issuer, long days)
+{
+	/* Issuance never extends beyond the issuer or revives an expired CA. */
+	if (X509_cmp_current_time(X509_get0_notBefore(issuer)) > 0 ||
+	    X509_cmp_current_time(X509_get0_notAfter(issuer)) <= 0 ||
+	    !X509_gmtime_adj(X509_getm_notBefore(cert), -300) ||
+	    !X509_gmtime_adj(X509_getm_notAfter(cert), 86400L * days))
+		return 0;
+	if (ASN1_TIME_compare(X509_get0_notBefore(cert), X509_get0_notBefore(issuer)) < 0 &&
+	    !X509_set1_notBefore(cert, X509_get0_notBefore(issuer)))
+		return 0;
+	if (ASN1_TIME_compare(X509_get0_notAfter(cert), X509_get0_notAfter(issuer)) > 0 &&
+	    !X509_set1_notAfter(cert, X509_get0_notAfter(issuer)))
+		return 0;
+	return 1;
+}
+
 static uc_value_t *sign(uc_vm_t *vm, size_t nargs)
 {
+	uc_value_t *duration = uc_fn_arg(4);
+	int64_t days = nargs < 5 ? 365 : ucv_type(duration) == UC_INTEGER ? ucv_int64_get(duration) : 0;
+	if (days < 1 || days > 365) return NULL;
 	uc_value_t *string_values[4];
 	EVP_PKEY *key = read_key(string_arg(vm, nargs, 0, &string_values[0]));
 	X509 *issuer = read_cert(string_arg(vm, nargs, 1, &string_values[1])), *cert = X509_new();
@@ -271,8 +291,7 @@ static uc_value_t *sign(uc_vm_t *vm, size_t nargs)
 	    X509_check_private_key(issuer, key) == 1 && EVP_PKEY_base_id(pub) == EVP_PKEY_ED25519 &&
 	    same_subject(X509_REQ_get_subject_name(req), id) && key_identity(pub, id) && X509_REQ_verify(req, pub) == 1 &&
 	    X509_set_version(cert, 2) && serial(cert) &&
-	    X509_gmtime_adj(X509_getm_notBefore(cert), -300) &&
-	    X509_gmtime_adj(X509_getm_notAfter(cert), 86400L * 365) &&
+	    leaf_times(cert, issuer, days) &&
 	    X509_set_subject_name(cert, X509_REQ_get_subject_name(req)) &&
 	    X509_set_issuer_name(cert, X509_get_subject_name(issuer)) && X509_set_pubkey(cert, pub) &&
 	    extension(cert, issuer, NID_basic_constraints, "critical,CA:FALSE") &&
@@ -320,6 +339,20 @@ static uc_value_t *fingerprint(uc_vm_t *vm, size_t nargs)
 	int n = cert ? i2d_X509(cert, &der) : -1;
 	uc_value_t *result = n > 0 ? hex_digest(der, (size_t)n) : NULL;
 	OPENSSL_free(der);
+	X509_free(cert);
+	return result;
+}
+
+static uc_value_t *certificate_key_fingerprint(uc_vm_t *vm, size_t nargs)
+{
+	uc_value_t *string_values[1];
+	X509 *cert = read_cert(string_arg(vm, nargs, 0, &string_values[0]));
+	EVP_PKEY *key = cert ? X509_get_pubkey(cert) : NULL;
+	unsigned char *der = NULL;
+	int n = key ? i2d_PUBKEY(key, &der) : -1;
+	uc_value_t *result = n > 0 ? hex_digest(der, (size_t)n) : NULL;
+	OPENSSL_free(der);
+	EVP_PKEY_free(key);
 	X509_free(cert);
 	return result;
 }
@@ -533,6 +566,7 @@ static const uc_function_list_t functions[] = {
 	{ "sha256", hash }, { "hmac", hmac }, { "constant_equal", constant_equal }, { "keypair", keypair },
 	{ "key_fingerprint", key_fingerprint }, { "csr", csr }, { "ca", ca },
 	{ "sign", sign }, { "verify_leaf", verify_leaf }, { "fingerprint", fingerprint },
+	{ "certificate_key_fingerprint", certificate_key_fingerprint },
 	{ "normalize_cert", normalize_cert }, { "certificate_identity", certificate_identity },
 	{ "certificate_status", certificate_status },
 	{ "message_sign", message_sign }, { "message_verify", message_verify },

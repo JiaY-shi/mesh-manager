@@ -254,7 +254,8 @@ int mesh_probe(const char *peer, const char *controller, const char *certificate
 	error = "not_authorized";
 	member = field(members, peer); authorized = field(member, "authorized");
 	if (!json_object_is_type(authorized, json_type_boolean) || !json_object_get_boolean(authorized) ||
-	    !text(member, "certificate") || strcmp(text(member, "certificate"), certificate))
+	    !text(member, "certificate") || (strcmp(text(member, "certificate"), certificate) &&
+	    (!hex(text(member, "certificate_successor"), 64) || strcmp(text(member, "certificate_successor"), certificate))))
 		goto done;
 	error = "invalid_request";
 	nonce = text(request, "nonce");

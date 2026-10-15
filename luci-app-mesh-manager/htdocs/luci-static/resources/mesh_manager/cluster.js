@@ -18,6 +18,7 @@ var rpcMethods = {};
 	['onboard_status',[]],
 	['onboard_stop',[]],
 	['node_revoke',['node_id']], ['node_rename_preview',['node_id','name']],
+	['certificate_renew',['node_id']],
 	['node_rename',['request_id','approval','takeover']],
 	['local_overrides_stage',['local','request_id','takeover','approval']], ['apply',['transaction_id']],
 	['cluster_preflight',['intent','request_id','maintenance']], ['cluster_apply',['transaction_id','approval','takeover']],
@@ -552,6 +553,15 @@ function summary(page,data,c,refresh,writable) {
 	var result=[],id=c.identity || {},a=c.active;
 	if(page==='advanced')result.push(migration.section(data,c,refresh,writable));
 	writable=writable && !migration.pending(c);
+	if(page==='advanced' && id.role==='root')result.push(widgets.section(_('Device certificates'),[
+		E('p',{'class':'mm-muted'},[_('Certificates renew automatically within 30 days of expiry. Each device renews independently when connected.')]),
+		button(_('Renew certificates now'),function() {
+			return call('certificate_renew','').then(function() {
+				ui.addNotification(null,E('p',{},[_('Certificate renewal requested. Connected devices will renew automatically.')]));
+				return refresh();
+			});
+		},!writable)
+	]));
 	if(page==='nodes'){
 		var stop=lifecycle.stopStatus(data,refresh,writable);if(stop)result.push(stop);
 		if(id.role==='ap' && data.configured)result.push(widgets.section(_('This device'),[table([_('Node'),_('Status'),_('Mesh'),_('Actions')],[

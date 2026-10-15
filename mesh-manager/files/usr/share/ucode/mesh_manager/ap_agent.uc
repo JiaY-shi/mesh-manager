@@ -22,6 +22,8 @@ import { agent_local } from './agent_local.uc';
 import { sanitize_report } from './agent_report.uc';
 import {migration_receipt} from './migration_model.uc';
 import {accept_anchor_roster} from './anchor_roster.uc';
+import {certificate_renewal} from './certificate_renewal.uc';
+const certificates=certificate_renewal(durable);
 
 // Only AP behavior lives here. Root orchestration is loaded in another worker.
 // A long-lived AP retains the original bounded retry windows across ticks.
@@ -457,6 +459,7 @@ export function ap_agent_tick() {
 	});
 	let request = { protocol: 1, network_id: data.binding.network_id, action: 'poll', report },
 		handoff = data.handoff != null ? { frame: handoff_poll_context(), proof: null } : null;
+	if(!handoff)request.credentials=certificates.poll(data);
 	let reply;
 	try {reply=handoff?.frame ? handoff_poll(data.binding,request,handoff.frame,value=>{handoff.proof=value;}) : agent_exchange(data.binding,request,data);}
 	catch(e) {
@@ -483,6 +486,13 @@ export function ap_agent_tick() {
 		reply.network_id != data.binding.network_id
 	)
 		die('identity_error: Controller identity changed');
+	if(reply.credentials!=null) {
+		// The poll capture is no longer needed. Reclaim it before checking the
+		// unchanged write reserve on devices with little free memory.
+		status=null;report=null;request=null;gc('collect');
+		durable.locked(()=>certificates.accept(data,reply.credentials));
+		data=durable.load('identity.json');
+	}
 	if(reply.anchor_roster!=null)durable.locked(()=>{
 		let current=durable.load('identity.json');
 		if(!same_ap_binding(data,current))die('identity_error: Gateway binding changed before roster update');

@@ -10,7 +10,7 @@ export function validate_request(request) {
 }
 function needed(request, data) {
 	return request?.action != 'probe' && (request?.action != 'poll' ||
-		data?.command != null || data?.intent != null || data?.authorization != null || data?.anchor_roster != null);
+		data?.command != null || data?.intent != null || data?.authorization != null || data?.anchor_roster != null || data?.credentials != null);
 }
 
 // io contains only local credentials and a clock; no persistence or shell process.
@@ -51,7 +51,8 @@ export function unseal(binding, request, response, io) {
 		type(proof.body) != 'string' || length(proof.body) > 60000 ||
 		!crypto.message_verify(io.read('network-ca.crt'), proof.certificate,
 			binding.controller_id, DOMAIN + proof.body, proof.signature)) fail();
-	if(binding.controller_certificate!=null && crypto.fingerprint(proof.certificate)!=binding.controller_certificate)fail();
+	if(binding.controller_key!=null ? crypto.certificate_key_fingerprint(proof.certificate)!=binding.controller_key :
+		binding.controller_certificate!=null && crypto.fingerprint(proof.certificate)!=binding.controller_certificate)fail();
 	let envelope;
 	try { envelope = json(proof.body); } catch (e) { fail(); }
 	let now = io.time();

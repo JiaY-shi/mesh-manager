@@ -38,6 +38,8 @@ import { restoration_epoch } from './restoration.uc';
 import {require_authority} from './authority.uc';
 import {public_migration} from './migration_model.uc';
 import {anchor_roster} from './anchor_roster.uc';
+import {certificate_renewal} from './certificate_renewal.uc';
+const certificates=certificate_renewal(durable);
 
 import { agent_local } from './agent_local.uc';
 import { sanitize_report } from './agent_report.uc';
@@ -542,6 +544,7 @@ export function advanced_dispatch(method, args) {
 		if (method == 'mesh_stop_apply') return cluster.lifecycle.apply(args.request_id, args.approval, args.takeover);
 		if (method == 'mesh_stop_cancel') return cluster.lifecycle.cancel(args.request_id);
 
+		if (method == 'certificate_renew') return certificates.request(args.node_id);
 		if (method == 'node_revoke') return pair.revoke(args.node_id);
 		if (method == 'node_rename_preview') return pair.rename_preview(args.node_id,args.name);
 		if (method == 'node_rename') return pair.rename(args);
@@ -582,11 +585,15 @@ export function peer_request(identity, mode, request, source, destination, certi
 			}
 		}
 		if(local_identity.role!='root')die('not_controller: Only the active controller accepts configuration requests');
-		if (certificate != null && certificate != pair.state().members[identity]?.certificate)
+		let member=pair.state().members[identity];
+		if (certificate != null && certificate!=member?.certificate &&
+			(member?.authorized!==true || certificate!=member.certificate_successor))
 			die('not_authorized: Node certificate is no longer authorized');
 		let access=control_ingress(durable.load('identity.json'),pair.state(),identity,request,
 			destination,durable.boot(),durable.now());
 		let reply=ingress_response(access,cluster.peer(identity, request));
+		if(member?.authorized===true && request.action=='poll' && request.credentials!=null)
+			reply.credentials=certificates.peer(identity,certificate,request.credentials);
 		let roster=anchor_roster(local_identity,pair.state(),identity,crypto.fingerprint(durable.read('device.crt')));
 		if(roster!=null)reply.anchor_roster=roster;
 		if (access.pin) {
@@ -608,6 +615,7 @@ export function agent_tick() {
 			let service=migration();durable.locked(()=>service.tick_locked());service.handover();return;
 		}
 		durable.locked(() => services().cluster.tick());
+		durable.locked(() => certificates.root_tick());
 		try {
 			let local = durable.load('state.json');
 			let sample = local?.intent && !local.paused ? observe_clients(local.intent) : null, clients = client_events.sanitize_clients(sample?.clients);

@@ -274,8 +274,21 @@ static int listener(const struct sockaddr_in *addr, unsigned int control_index)
 	return sock;
 }
 
-static int serve(SSL_CTX *ctx, const struct sockaddr_in *addr, int enrollment)
+static int credentials_changed(const struct stat before[3], const struct stat after[3])
 {
+	for (int i = 0; i < 3; i++)
+		if (before[i].st_dev != after[i].st_dev || before[i].st_ino != after[i].st_ino ||
+		    before[i].st_size != after[i].st_size ||
+		    before[i].st_mtim.tv_sec != after[i].st_mtim.tv_sec || before[i].st_mtim.tv_nsec != after[i].st_mtim.tv_nsec ||
+		    before[i].st_ctim.tv_sec != after[i].st_ctim.tv_sec || before[i].st_ctim.tv_nsec != after[i].st_ctim.tv_nsec)
+			return 1;
+	return 0;
+}
+
+static int serve(SSL_CTX **active, const struct sockaddr_in *addr, int enrollment, const char *ca, const char *cert, const char *key)
+{
+	const char *paths[] = { ca, cert, key };
+	struct stat loaded[3] = { 0 };
 	int isolated = !enrollment && ntohl(addr->sin_addr.s_addr) == CONTROL_ADDRESS;
 	int sock = isolated ? -1 : listener(addr, 0);
 	unsigned int control_index = 0;
@@ -314,15 +327,50 @@ static int serve(SSL_CTX *ctx, const struct sockaddr_in *addr, int enrollment)
 			close(fd); close(sock); sock = -1; next_interface_check = 0; continue;
 		}
 		if (slot < 0) { close(fd); continue; }
+		struct stat current[3], verified[3];
+		int complete = 1;
+		for (int i = 0; i < 3; i++) if (stat(paths[i], &current[i])) complete = 0;
+		if (!complete) { close(fd); continue; }
+		if (credentials_changed(loaded, current)) {
+			/* Reuse one context until atomic credential publication changes a
+			 * file. Children inherit it without parsing a second copy per poll. */
+			SSL_CTX *next = context(ca, cert, key, 1, enrollment);
+			for (int i = 0; i < 3; i++) if (stat(paths[i], &verified[i])) complete = 0;
+			if (!next || !complete || credentials_changed(current, verified)) {
+				SSL_CTX_free(next); close(fd); continue;
+			}
+			SSL_CTX_free(*active); *active = next;
+			memcpy(loaded, current, sizeof(loaded));
+		}
 		children[slot] = fork();
 		if (!children[slot]) {
 			close(sock);
-			handle(ctx, fd, enrollment, control_index);
+			handle(*active, fd, enrollment, control_index);
 			_exit(0);
 		}
 		if (children[slot] < 0) children[slot] = 0;
 		close(fd);
 	}
+}
+
+static int pinned(SSL *ssl, const char *certificate, const char *pin)
+{
+	if (!pin || !strcmp(certificate, pin)) return 1;
+	if (strncmp(pin, "key:", 4)) return 0;
+	X509 *cert = SSL_get1_peer_certificate(ssl);
+	EVP_PKEY *key = cert ? X509_get_pubkey(cert) : NULL;
+	unsigned char *der = NULL, digest[32];
+	unsigned int size = 0;
+	char hex[65];
+	int n = key ? i2d_PUBKEY(key, &der) : -1, ok = 0;
+	if (n > 0 && EVP_Digest(der, (size_t)n, digest, &size, EVP_sha256(), NULL) && size == 32) {
+		for (unsigned int i = 0; i < size; i++) snprintf(hex + i * 2, 3, "%02x", digest[i]);
+		ok = !strcmp(hex, pin + 4);
+	}
+	OPENSSL_free(der);
+	EVP_PKEY_free(key);
+	X509_free(cert);
+	return ok;
 }
 
 static int client(SSL_CTX *ctx, const struct sockaddr_in *addr, const char *expected, const char *device, const char *pin, int probe)
@@ -353,7 +401,7 @@ static int client(SSL_CTX *ctx, const struct sockaddr_in *addr, const char *expe
 	SSL_set_fd(ssl, sock);
 	char certificate[65];
 	if (SSL_connect(ssl) != 1 || !peer_identity(ssl, identity, certificate) || strcmp(identity, expected) ||
-	    (pin && strcmp(certificate, pin)))
+	    !pinned(ssl, certificate, pin))
 		goto done;
 	if (frame(ssl, buffer, &size, 1, &probe, 0) && frame(ssl, buffer, &size, 0, NULL, 0) && write_all(STDOUT_FILENO, buffer, size))
 		rc = 0;
@@ -429,7 +477,8 @@ int main(int argc, char **argv)
 	if (server && argc != 8)
 		return 2;
 	if (argc == 10) {
-		if (strlen(argv[9]) != 64 || strspn(argv[9], "0123456789abcdef") != 64) return 2;
+		const char *pin = !strncmp(argv[9], "key:", 4) ? argv[9] + 4 : argv[9];
+		if (strlen(pin) != 64 || strspn(pin, "0123456789abcdef") != 64) return 2;
 	}
 	enrollment = server && !strcmp(argv[7], "enroll");
 	if (server && strcmp(argv[7], "node") && !enrollment)
@@ -437,7 +486,7 @@ int main(int argc, char **argv)
 	ctx = context(argv[4], argv[5], argv[6], server, enrollment);
 	if (!ctx)
 		return 3;
-	rc = server ? serve(ctx, &addr, enrollment) : client(ctx, &addr, argv[7],
+	rc = server ? serve(&ctx, &addr, enrollment, argv[4], argv[5], argv[6]) : client(ctx, &addr, argv[7],
 		argc >= 9 && strcmp(argv[8], "-") ? argv[8] : NULL, argc == 10 ? argv[9] : NULL, !strcmp(argv[1], "probe"));
 	SSL_CTX_free(ctx);
 	return rc;

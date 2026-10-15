@@ -10,6 +10,9 @@ import { start } from 'mesh_process';
 import { controller_loss_tick } from 'mesh_manager.controller_loss_runtime';
 import { feature_controller, feature_now, feature_boot, feature_signature, feature_cache_frame, publish_feature_cache } from 'mesh_manager.capability_features';
 import { reconcile_services } from 'mesh_manager.service_runtime';
+import * as durable from 'mesh_manager.durable';
+import {certificate_renewal} from 'mesh_manager.certificate_renewal';
+const certificates=certificate_renewal(durable);
 
 uloop.init();
 const stop_collection = collection_start();
@@ -23,6 +26,7 @@ let wireless = feature_controller({now:feature_now,boot:feature_boot,signature:f
 function tick() {
 	let delay = 2000;
 	try {
+		if(durable.load('identity.json')?.certificate_update)durable.locked(()=>certificates.recover());
 		let pending=recovery_pending() || onboard_pending();
 		if (pending) { wireless.tick(true); locked(service => { onboard_status(); service.tick(); }); }
 		controller_loss_tick();

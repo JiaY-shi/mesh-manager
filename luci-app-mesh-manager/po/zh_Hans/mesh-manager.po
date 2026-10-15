@@ -2690,3 +2690,15 @@ msgstr "等待中"
 
 msgid "Automatic channel choices use passive measurements when available, otherwise deterministic legal allocation"
 msgstr "自动信道选择优先采用被动负载测量；没有测量时，按确定规则分配合法信道"
+
+msgid "Device certificates"
+msgstr "设备证书"
+
+msgid "Certificates renew automatically within 30 days of expiry. Each device renews independently when connected."
+msgstr "证书在到期前 30 天内自动续期。各设备连接后独立完成，不互相等待。"
+
+msgid "Renew certificates now"
+msgstr "立即续期证书"
+
+msgid "Certificate renewal requested. Connected devices will renew automatically."
+msgstr "已请求续期，已连接的设备将自动完成。"

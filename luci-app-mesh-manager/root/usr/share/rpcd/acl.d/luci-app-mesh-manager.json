@@ -49,6 +49,7 @@
           "rollback",
           "controller_init",
           "node_revoke",
+          "certificate_renew",
           "node_rename",
           "node_rename_preview",
           "cluster_preflight",
