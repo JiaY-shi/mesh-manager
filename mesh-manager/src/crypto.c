@@ -77,6 +77,26 @@ static X509 *read_cert(const char *pem)
 	return cert;
 }
 
+/* Local trust files contain one CA, or exactly two during a manual rotation.
+ * Enrollment still normalizes its independently pinned first certificate. */
+static int trust_store(X509_STORE *store, const char *pem)
+{
+	BIO *bio = pem ? BIO_new_mem_buf(pem, (int)strlen(pem)) : NULL;
+	X509 *cert;
+	int count = 0, ok = store && bio;
+	while (ok && (cert = PEM_read_bio_X509(bio, NULL, NULL, NULL))) {
+		EVP_PKEY *pub = X509_get_pubkey(cert);
+		ok = ++count <= 2 && pub && EVP_PKEY_base_id(pub) == EVP_PKEY_ED25519 &&
+			X509_check_ca(cert) > 0 && X509_verify(cert, pub) == 1 &&
+			X509_NAME_cmp(X509_get_subject_name(cert), X509_get_issuer_name(cert)) == 0 &&
+			X509_STORE_add_cert(store, cert) == 1;
+		EVP_PKEY_free(pub);
+		X509_free(cert);
+	}
+	BIO_free(bio);
+	return ok && count > 0;
+}
+
 static uc_value_t *hex_digest(const unsigned char *data, size_t len)
 {
 	unsigned char hash[EVP_MAX_MD_SIZE];
@@ -326,14 +346,15 @@ static uc_value_t *sign(uc_vm_t *vm, size_t nargs)
 static uc_value_t *verify_leaf(uc_vm_t *vm, size_t nargs)
 {
 	uc_value_t *string_values[4];
-	X509 *issuer = read_cert(string_arg(vm, nargs, 0, &string_values[0])), *leaf = read_cert(string_arg(vm, nargs, 1, &string_values[1]));
+	const char *trust = string_arg(vm, nargs, 0, &string_values[0]);
+	X509 *issuer = read_cert(trust), *leaf = read_cert(string_arg(vm, nargs, 1, &string_values[1]));
 	EVP_PKEY *key = read_key(string_arg(vm, nargs, 2, &string_values[2]));
 	const char *id = string_arg(vm, nargs, 3, &string_values[3]);
 	X509_STORE *store = X509_STORE_new();
 	X509_STORE_CTX *ctx = X509_STORE_CTX_new();
 	int ok = issuer && leaf && key && store && ctx && X509_check_ca(issuer) > 0 &&
 		X509_check_ca(leaf) == 0 && same_subject(X509_get_subject_name(leaf), id) &&
-		X509_check_private_key(leaf, key) == 1 && X509_STORE_add_cert(store, issuer) == 1 &&
+		X509_check_private_key(leaf, key) == 1 && trust_store(store, trust) &&
 		X509_STORE_CTX_init(ctx, store, leaf, NULL) == 1 && X509_verify_cert(ctx) == 1;
 	X509_STORE_CTX_free(ctx);
 	X509_STORE_free(store);
@@ -461,14 +482,20 @@ static uc_value_t *certificate_status(uc_vm_t *vm, size_t nargs)
 		if (!signing_leaf(leaf, id)) leaf_state = "identity_mismatch";
 		else if (X509_check_purpose(leaf, X509_PURPOSE_SSL_CLIENT, 0) != 1 ||
 		         X509_check_purpose(leaf, X509_PURPOSE_SSL_SERVER, 0) != 1) leaf_state = "invalid";
-		else if (!ca_ok || !store || !chain || X509_STORE_add_cert(store, issuer) != 1 ||
+		else if (!ca_ok || !store || !chain || !trust_store(store, ca_pem) ||
 		         X509_STORE_CTX_init(chain, store, leaf, NULL) != 1) leaf_state = "untrusted";
 		else {
 			/* First verify signatures/constraints; classify dates explicitly afterwards. */
 			X509_VERIFY_PARAM_set_flags(X509_STORE_CTX_get0_param(chain), X509_V_FLAG_NO_CHECK_TIME);
 			if (X509_verify_cert(chain) != 1) leaf_state = "untrusted";
 			else if (strcmp(ca_state, "valid") && strcmp(ca_state, "expiring")) leaf_state = "untrusted";
-			else leaf_state = certificate_time(leaf, at);
+			else {
+				STACK_OF(X509) *verified = X509_STORE_CTX_get0_chain(chain);
+				X509 *anchor = verified ? sk_X509_value(verified, sk_X509_num(verified) - 1) : NULL;
+				const char *state = anchor ? certificate_time(anchor, at) : "invalid";
+				leaf_state = !strcmp(state, "valid") || !strcmp(state, "expiring") ?
+					certificate_time(leaf, at) : "untrusted";
+			}
 		}
 	}
 	ucv_object_add(out, "ca", certificate_summary(vm, issuer, ca_state, (time_t)clock));
@@ -561,13 +588,14 @@ static uc_value_t *message_verify_time(uc_vm_t *vm, size_t nargs, bool explicit_
 	const char *signature = string_arg(vm, nargs, 4, &string_values[4]);
 	if (!message_value(data) || !signature || strlen(signature) != 128)
 		return ucv_boolean_new(false);
-	X509 *issuer = read_cert(string_arg(vm, nargs, 0, &string_values[0])), *leaf = read_cert(string_arg(vm, nargs, 1, &string_values[1]));
+	const char *trust = string_arg(vm, nargs, 0, &string_values[0]);
+	X509 *issuer = read_cert(trust), *leaf = read_cert(string_arg(vm, nargs, 1, &string_values[1]));
 	const char *id = string_arg(vm, nargs, 2, &string_values[2]);
 	X509_STORE *store = X509_STORE_new();
 	X509_STORE_CTX *chain = X509_STORE_CTX_new();
 	EVP_PKEY *pub = leaf ? X509_get_pubkey(leaf) : NULL;
 	int ok = issuer && leaf && store && chain && pub && X509_check_ca(issuer) > 0 &&
-		signing_leaf(leaf, id) && X509_STORE_add_cert(store, issuer) == 1 &&
+		signing_leaf(leaf, id) && trust_store(store, trust) &&
 		X509_STORE_CTX_init(chain, store, leaf, NULL) == 1;
 	/* Bootstrap verifies a fresh signed controller time. Dates remain checked
 	 * at that exact time; ordinary message and TLS validation use system time. */

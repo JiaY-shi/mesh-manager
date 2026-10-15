@@ -38,6 +38,7 @@ export function certificate_renewal(io) {
  }
  function install(next) {
   recover();let i=io.load('identity.json'),before=io.read('device.crt');
+  if(i.ca_update)die('ca_pending: Local CA replacement is recovering');
   if(next===before)return;
   if(authority_busy(i,i.role=='root' ? io.load('cluster.json') : null) || !valid(next,i))
    die('certificate_conflict: Certificate replacement requires the active identity and authority');
@@ -77,6 +78,8 @@ export function certificate_renewal(io) {
   if(i.role!='root' || m?.authorized!==true || presented!=m.certificate && presented!=m.certificate_successor)
    die('not_authorized: Certificate is no longer authorized');
   if(presented==m.certificate_successor) {
+   if(crypto.certificate_status(crypto.normalize_cert(io.read('network-ca.crt')),m.certificate_offer,id,clock()).device.status=='valid')
+    m.certificate_ca=crypto.fingerprint(io.read('network-ca.crt'));
    m.certificate=presented;delete m.certificate_successor;delete m.certificate_offer;
    delete m.certificate_requested;changed=true;
    if(i.anchor?.id==id){i.anchor.certificate=presented;save('identity.json',i);}

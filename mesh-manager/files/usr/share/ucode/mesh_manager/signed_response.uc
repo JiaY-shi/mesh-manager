@@ -11,7 +11,7 @@ export function validate_request(request) {
 }
 function needed(request, data) {
 	return request?.action != 'probe' && (request?.action != 'poll' ||
-		data?.command != null || data?.intent != null || data?.authorization != null || data?.anchor_roster != null || data?.credentials != null || data?.signing_update != null);
+		data?.command != null || data?.intent != null || data?.authorization != null || data?.anchor_roster != null || data?.credentials != null || data?.signing_update != null || data?.ca != null);
 }
 
 // io contains only local credentials and a clock; no persistence or shell process.

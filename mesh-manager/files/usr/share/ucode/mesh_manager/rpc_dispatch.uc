@@ -15,7 +15,7 @@ import {require_authority} from 'mesh_manager.authority';
 export function invoke(method, args) {
 	try {
 		let result;
-		if(index(['status','status_detail','diagnostics','roaming_status','onboard_status','migration_status','migration_preflight','migration_apply','migration_cancel','migration_resume','rollback'],method)<0) {
+		if(index(['status','status_detail','diagnostics','roaming_status','onboard_status','ca_rotate','migration_status','migration_preflight','migration_apply','migration_cancel','migration_resume','rollback'],method)<0) {
 			let identity=durable.load('identity.json');require_authority(identity,identity?.role=='root' ? durable.load('cluster.json') : null);
 		}
 		if (args?.takeover===true && index(['stage','mesh_stage','repair_stage','local_overrides_stage'],method)>=0)
@@ -68,7 +68,7 @@ export function invoke(method, args) {
 		else if (index(['preview', 'stage', 'apply', 'confirm', 'rollback'], method) >= 0)
 			result = dispatch(method, args || {});
 		else result = advanced_dispatch(method, args || {});
-		if (index(['enrollment_start','controller_init','setup_create'],method)>=0) wake_service();
+		if (index(['ca_rotate','enrollment_start','controller_init','setup_create'],method)>=0) wake_service();
 		return { ok: true, data: result };
 	} catch (e) {
 		let text = '' + e,

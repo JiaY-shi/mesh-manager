@@ -9,7 +9,8 @@ export function service_policy(identity,state,temporary,demand,cluster) {
 	let roles=['unbound','root','ap'],final=['committed','rolled_back','expired'],
 		unknown=identity!=null && (identity.schema!==1 || index(roles,identity.role)<0) ||
 			state!=null && (state.schema!==1 || type(state.owned)!='array' || type(state.history)!='array'),
-		pending=identity?.certificate_update!=null || state?.active!=null && index(final,state.active.status)<0 ||
+		pending=identity?.ca_update!=null || identity?.ca_rotation!=null ||
+			cluster?.ca_rotation!=null && cluster.ca_rotation.phase!='complete' || identity?.certificate_update!=null || state?.active!=null && index(final,state.active.status)<0 ||
 			migration_pending(identity?.migration) || migration_pending(cluster?.migration) || identity?.authority_fence!=null ||
 			state?.intent==null && length(state?.owned || [])>0 ||
 			identity?.role=='root' && length(filter([cluster?.active,cluster?.lifecycle],job=>job!=null &&

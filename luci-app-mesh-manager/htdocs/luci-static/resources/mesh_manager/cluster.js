@@ -18,7 +18,7 @@ var rpcMethods = {};
 	['onboard_status',[]],
 	['onboard_stop',[]],
 	['node_revoke',['node_id']], ['node_rename_preview',['node_id','name']],
-	['certificate_renew',['node_id']], ['signing_rotate',['expected_epoch','request_id']],
+	['ca_rotate',['expected_ca','request_id']], ['certificate_renew',['node_id']], ['signing_rotate',['expected_epoch','request_id']],
 	['node_rename',['request_id','approval','takeover']],
 	['local_overrides_stage',['local','request_id','takeover','approval']], ['apply',['transaction_id']],
 	['cluster_preflight',['intent','request_id','maintenance']], ['cluster_apply',['transaction_id','approval','takeover']],
@@ -47,7 +47,7 @@ function retryBusy(method, args, waiting, attempt, active) {
 	attempt = attempt || 0;
 	function cancelled() { var error=new Error('Cancelled');error.code='job_cancelled';return error; }
 	if(active && !active())return Promise.reject(cancelled());
-	// Only idempotent preflight, name transactions and read-only requests use this helper.
+	// Only idempotent preflight, key rotations, name transactions and read-only requests use this helper.
 	// The caller keeps one request ID and one candidate for the whole attempt.
 	return call.apply(null, [method].concat(args)).then(function(result) {
 		if(active && !active())throw cancelled();
@@ -69,6 +69,7 @@ function input(value,type) { return E('input',{type:type || 'text',value:value |
 function checkbox(value) { return E('input',{type:'checkbox',checked:value ? '' : null}); }
 function select(items,value) { return E('select',{},items.map(function(item) { return E('option',{value:item[0],selected:item[0] === value ? '' : null},[item[1]]); })); }
 var table = widgets.table;
+function caPending(c) { return !!(c && c.ca_rotation && c.ca_rotation.phase!=='complete'); }
 function requestId() { var b=new Uint8Array(16); window.crypto.getRandomValues(b); return Array.from(b).map(function(n) { return n.toString(16).padStart(2,'0'); }).join(''); }
 function stateLabel(state) {
 	var labels={unbound:_('Not enrolled'),root:_('Controller'),ap:_('AP node'),pending:_('Registering node identity'),approved:_('Approved'),rejected:_('Rejected'),preflight:_('Preflighting'),ready:_('Ready'),queued:_('Queued'),preparing:_('Preparing repair preview'),reserved:_('Local repair reserved'),applying:_('Applying'),awaiting_confirm:_('Awaiting confirmation'),confirming:_('Confirming'),committed:_('Committed'),complete:_('Complete'),partial:_('Partially completed'),failed:_('Failed'),rolling_back:_('Rolling back'),rolled_back:_('Rolled back'),rollback_conflict:_('Rollback conflict'),expired:_('Expired')};
@@ -486,6 +487,7 @@ function unifiedForm(data,c,refresh,writable,page) {
 		var job=latest.active, busy=job && ['complete','partial','failed','rolled_back','expired'].indexOf(job.phase)<0;
 		if(next.cluster && next.active && ['committed','rolled_back','rollback_conflict','expired'].indexOf(next.active.status)<0)busy=true;
 		if(latest.lifecycle && ['complete','failed','partial','cancelled','expired'].indexOf(latest.lifecycle.phase)<0)busy=true;
+		if(caPending(latest))busy=true;
 		var stale=(latest.version || 0)!==initialVersion;
 		if(next.cluster && (next.mesh_enabled===false || migration.pending(next.cluster)))busy=true;
 		widgets.lockEditor(editor,!writable || sending || !!busy || stale);
@@ -551,8 +553,17 @@ function clusterNodeList(data,c,a) {
 function summary(page,data,c,refresh,writable) {
 	if(!c)return [];
 	var result=[],id=c.identity || {},a=c.active;
-	if(page==='advanced')result.push(migration.section(data,c,refresh,writable));
-	writable=writable && !migration.pending(c);
+	if(page==='advanced')result.push(migration.section(data,c,refresh,writable && !caPending(c)));
+	writable=writable && !migration.pending(c) && !caPending(c);
+	if(page==='advanced' && id.role==='root')result.push(widgets.section(_('Network CA'),[
+		E('p',{'class':'mm-muted'},[_('Rotate trust and renew device certificates, then retire the old CA. Offline devices pause completion. Keep all devices connected.')]),
+		c.ca_rotation ? E('p',{},[({trust:_('Distributing CA trust'),renew:_('Renewing certificates'),retire:_('Retiring old CA'),complete:_('CA rotation complete')})[c.ca_rotation.phase] || _('Unavailable')]) : null,
+		button(_('Rotate network CA'),function() {
+			return retryBusy('ca_rotate',[c.ca_fingerprint,requestId()]).then(function() {
+				ui.addNotification(null,E('p',{},[_('CA rotation started.')]));return refresh();
+			});
+		},!writable || !c.ca_fingerprint)
+	]));
 	if(page==='advanced' && id.role==='root')result.push(widgets.section(_('Device certificates'),[
 		E('p',{'class':'mm-muted'},[_('Certificates renew automatically within 30 days of expiry. Each device renews independently when connected.')]),
 		button(_('Renew certificates now'),function() {
@@ -767,10 +778,10 @@ return baseclass.extend({
 				E('div',{'class':'mm-form mm-basic-form'},[fields.fields[0]]),
 				widgets.details(_('Advanced settings'),[localFacts,E('div',{'class':'mm-form'},fields.fields.slice(1))])
 			]);
-			widgets.lockEditor(editor,!writable || migration.pending(c));
+			widgets.lockEditor(editor,!writable || caPending(c) || migration.pending(c));
 			var save=button(_('Preview and apply'),function() {
 				return localSettingsPreview(fields.value(), data, refresh, writable);
-			},!writable || migration.pending(c) || !data.mesh_enabled);
+			},!writable || caPending(c) || migration.pending(c) || !data.mesh_enabled);
 			save.classList.replace('cbi-button-neutral','cbi-button-save');
 			var addresses=data.local.management && data.local.management.addresses || [];
 			var localRole=c.identity.role==='ap' ? _('AP node') : c.identity.gateway==='bridge' ? _('Root bridge') : _('Root router');
@@ -790,7 +801,7 @@ return baseclass.extend({
 					widgets.failure(e.error,'first-configuration')) || E('span')] : []);
 				var local=next.active && ['committed','rolled_back','rollback_conflict','expired'].indexOf(next.active.status)<0;
 				var active=next.cluster && next.cluster.active;
-				var busy=migration.pending(next.cluster) || local || active && ['complete','partial','failed','rolled_back','expired'].indexOf(active.phase)<0;
+				var busy=caPending(next.cluster) || migration.pending(next.cluster) || local || active && ['complete','partial','failed','rolled_back','expired'].indexOf(active.phase)<0;
 				widgets.lockEditor(editor,!writable || !!busy || !next.mesh_enabled);
 				save.disabled=!writable || !!busy || !next.mesh_enabled;
 			};

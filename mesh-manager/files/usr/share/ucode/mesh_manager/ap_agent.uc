@@ -26,6 +26,8 @@ import {certificate_renewal} from './certificate_renewal.uc';
 import {config_signing} from './config_signing.uc';
 const certificates=certificate_renewal(durable);
 const signing=config_signing(durable);
+import {ca_rotation} from './ca_rotation.uc';
+const ca=ca_rotation(durable);
 
 // Only AP behavior lives here. Root orchestration is loaded in another worker.
 // A long-lived AP retains the original bounded retry windows across ticks.
@@ -463,6 +465,7 @@ export function ap_agent_tick() {
 		handoff = data.handoff != null ? { frame: handoff_poll_context(), proof: null } : null;
 	if(!handoff)request.credentials=certificates.poll(data);
 	if(!handoff)request.signing_epoch=data.signing?.epoch || 0;
+	if(!handoff)request.ca=ca.poll(data);
 	let reply;
 	try {reply=handoff?.frame ? handoff_poll(data.binding,request,handoff.frame,value=>{handoff.proof=value;}) : agent_exchange(data.binding,request,data);}
 	catch(e) {
@@ -495,6 +498,10 @@ export function ap_agent_tick() {
 		status=null;report=null;request=null;gc('collect');
 		durable.locked(()=>certificates.accept(data,reply.credentials));
 		data=durable.load('identity.json');
+	}
+	if(reply.ca!=null) {
+		status=null;report=null;request=null;gc('collect');
+		durable.locked(()=>ca.accept(data,reply.ca));data=durable.load('identity.json');
 	}
 	if(reply.signer_pin!=null) {
 		status=null;report=null;request=null;gc('collect');

@@ -2717,3 +2717,24 @@ msgstr "轮换签名密钥"
 
 msgid "Configuration signing key rotated."
 msgstr "配置签名密钥已轮换。"
+
+msgid "Rotate trust and renew device certificates, then retire the old CA. Offline devices pause completion. Keep all devices connected."
+msgstr "先更新信任并续期设备证书，再退役旧 CA。离线设备会暂停完成，请保持全部设备在线。"
+
+msgid "Distributing CA trust"
+msgstr "正在分发 CA 信任"
+
+msgid "Renewing certificates"
+msgstr "正在续期证书"
+
+msgid "Retiring old CA"
+msgstr "正在退役旧 CA"
+
+msgid "CA rotation complete"
+msgstr "CA 轮换完成"
+
+msgid "Rotate network CA"
+msgstr "轮换网络 CA"
+
+msgid "CA rotation started."
+msgstr "CA 轮换已开始。"

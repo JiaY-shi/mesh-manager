@@ -32,6 +32,8 @@ export function authority_busy(identity, cluster) {
 // A public request cannot authorize a private role transition. Configuration
 // recovery continues through its existing journal and independent watchdog.
 export function require_authority(identity, cluster) {
+	if(identity?.ca_update || identity?.ca_rotation || cluster?.ca_rotation && cluster.ca_rotation.phase!='complete')
+		die('ca_pending: Finish network CA rotation before changing configuration');
 	if(identity?.certificate_update!=null)
 		die('certificate_pending: Local certificate replacement is recovering');
 	if (authority_busy(identity, cluster))

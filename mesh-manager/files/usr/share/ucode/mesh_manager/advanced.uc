@@ -42,6 +42,8 @@ import {certificate_renewal} from './certificate_renewal.uc';
 import {config_signing} from './config_signing.uc';
 const certificates=certificate_renewal(durable);
 const signing=config_signing(durable);
+import {ca_rotation,ca_pending,public_ca} from './ca_rotation.uc';
+const ca=ca_rotation(durable);
 
 import { agent_local } from './agent_local.uc';
 import { sanitize_report } from './agent_report.uc';
@@ -340,10 +342,11 @@ function repair_target(data, action, request_id, version, purpose) {
 		die('identity_error: Controller identity changed');
 	return target;
 }
-function status_frame(i, detail) {
+function status_frame(i, detail, ca_capture) {
 	return i.locked(() => {
 		let frame={identity:i.load('identity.json'),state:i.load('cluster.json'),local:i.load('state.json'),
 			boot:i.boot(),now:i.now(),key:detail ? i.read('device.key') : null};
+		if(ca_capture)frame.ca_fingerprint=crypto.fingerprint(i.read('network-ca.crt'));
 		// Enrollment observations use the exact same native monotonic clock as
 		// their worker. The existing protocol uptime clock keeps its own scope.
 		if(i.enrollment_now)frame.enrollment_now=i.enrollment_now();
@@ -365,7 +368,7 @@ function captured_pair(i, frame) {
 }
 export function frozen_cluster_status(i, view) {
 	view = status_view(view);
-	let full = view == 'full', frame = status_frame(i), pair = captured_pair(i, frame);
+	let full = view == 'full', frame = status_frame(i,false,full || view=='nodes'), pair = captured_pair(i, frame);
 	// The captured identity and journal stay private while projection and telemetry run without the write lock.
 	let result = pair.status(view), state = pair.state();
 	if (full || index(['nodes', 'backhaul'], view) >= 0)
@@ -386,6 +389,8 @@ export function frozen_cluster_status(i, view) {
 			previous_name:row.previous_name,name:row.name,version:row.version,status:row.status,timestamp:row.timestamp}));
 	}
 	let identity = frame.identity;
+	result.ca_rotation=identity?.role=='root' ? public_ca(state) : identity?.ca_rotation ? {...identity.ca_rotation,phase:'pending'} : null;
+	result.ca_fingerprint=frame.ca_fingerprint;
 	result.signing_epoch=identity?.role=='root' ? state?.config_signing?.epoch || 0 : identity?.signing?.epoch || 0;
 	result.migration=identity?.role=='root' ? public_migration(state?.migration,full ? null : false) : public_migration(identity?.migration,false);
 	result.local_repair = identity?.agent?.repair ? {
@@ -464,8 +469,10 @@ function root_mesh(method, args) {
 	return staged;
 }
 export function advanced_dispatch(method, args) {
+	if(method=='ca_rotate')return durable.locked(()=>ca.start(args.expected_ca,args.request_id));
 	if (index(method,'migration_')==0) return durable.locked(()=>{
 		let service=migration();
+		if(method!='migration_status' && ca_pending(durable.load('cluster.json')))die('ca_pending: Finish CA rotation before controller migration');
 		if(method=='migration_status')return service.status();
 		if(method=='migration_preflight')return service.preflight(args.node_id,args.request_id);
 		if(method=='migration_apply')return service.apply(args.request_id,args.approval,args.takeover);
@@ -600,6 +607,7 @@ export function peer_request(identity, mode, request, source, destination, certi
 		if(request.action=='poll' && signer && request.signing_epoch!=signer.epoch)reply.signing_update=true;
 		if(member?.authorized===true && request.action=='poll' && request.credentials!=null)
 			reply.credentials=certificates.peer(identity,certificate,request.credentials);
+		if(member?.authorized===true && request.action=='poll' && request.ca!=null)reply.ca=ca.peer(identity,request.ca);
 		let roster=anchor_roster(local_identity,pair.state(),identity,crypto.fingerprint(durable.read('device.crt')));
 		if(roster!=null)reply.anchor_roster=roster;
 		if (access.pin) {
@@ -622,6 +630,7 @@ export function agent_tick() {
 		}
 		durable.locked(() => services().cluster.tick());
 		durable.locked(() => signing.ensure());
+		durable.locked(() => ca.tick());
 		durable.locked(() => certificates.root_tick());
 		try {
 			let local = durable.load('state.json');

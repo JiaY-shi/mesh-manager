@@ -13,6 +13,8 @@ import { reconcile_services } from 'mesh_manager.service_runtime';
 import * as durable from 'mesh_manager.durable';
 import {certificate_renewal} from 'mesh_manager.certificate_renewal';
 const certificates=certificate_renewal(durable);
+import {ca_rotation} from 'mesh_manager.ca_rotation';
+const ca=ca_rotation(durable);
 
 uloop.init();
 const stop_collection = collection_start();
@@ -26,6 +28,7 @@ let wireless = feature_controller({now:feature_now,boot:feature_boot,signature:f
 function tick() {
 	let delay = 2000;
 	try {
+		if(durable.load('identity.json')?.ca_update)durable.locked(()=>ca.recover());
 		if(durable.load('identity.json')?.certificate_update)durable.locked(()=>certificates.recover());
 		let pending=recovery_pending() || onboard_pending();
 		if (pending) { wireless.tick(true); locked(service => { onboard_status(); service.tick(); }); }
