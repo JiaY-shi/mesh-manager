@@ -76,6 +76,9 @@
 .mm-page .mm-pagination-count { margin-right: auto; }
 .mm-page .mm-pagination-page { min-width: 90px; text-align: center; }
 .mm-page button.mm-page-button { width: 28px; height: 28px; padding: 3px; }
+.mm-page .mm-pagination[role="status"] { justify-content: flex-start; align-items: center; flex-wrap: wrap; gap: 8px 12px; margin-top: 8px; padding: 8px 10px; border-left: 2px solid #b77913; background: var(--mm-surface); text-align: left; }
+.mm-page .mm-pagination[role="status"] > span { flex: 1 1 240px; min-width: 0; overflow-wrap: anywhere; }
+.mm-page .mm-pagination[role="status"] > button.mm-page-button { flex: 0 1 auto; width: auto; height: auto; max-width: 100%; padding: 3px 9px; white-space: normal; }
 :is(.mm-page, .mm-dialog) .mm-actions, :is(.mm-page, .mm-dialog) .mm-form-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; margin: 0; }
 .mm-page .mm-probe-target { width: auto; max-width: 240px; height: 28px; min-height: 28px; padding: 3px 6px; font-size: 13px; line-height: 20px; }
 .mm-page .mm-probe-result:not(:empty) { margin-top: 8px; }

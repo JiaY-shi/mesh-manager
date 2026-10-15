@@ -530,6 +530,23 @@ function showClusterReview(data,c,a,refresh,writable) {
 	if(a.phase==='ready')approvalModal(_('Apply reviewed cluster changes'),body,function() { return call('cluster_apply',a.id,a,true).then(refresh); },writable);
 	else widgets.modal(_('All-node preflight'),body.concat([button(_('Close'),function() { ui.hideModal(); })]));
 }
+function clusterNodeList(data,c,a) {
+	var id=c.identity || {}, members=c.members || [];
+	var nodes=[Object.assign({id:id.id,name:id.overrides && id.overrides.name ||
+		data.local.board && data.local.board.model || id.name || _('Controller')},a.root)].concat(a.nodes || []);
+	var list=E('ul',{'class':'mm-cluster-list'},nodes.map(function(n) {
+		var member=members.find(function(item) { return item.id===n.id; });
+		var name=n.name || member && member.name || n.id;
+		return E('li',{'class':'mm-cluster-item'},[
+			E('strong',{'class':'mm-cluster-name',title:n.id},[name]),
+			widgets.status(stateLabel(n.status),n.error ? 'error' : 'neutral'),
+			widgets.failure(n.error,'cluster:'+a.id+':'+n.id)
+		]);
+	}));
+	var detail=widgets.details(_('Nodes')+' ('+nodes.length+')',[list]);
+	detail.setAttribute('data-mm-detail','cluster-nodes:'+a.id);
+	return detail;
+}
 function summary(page,data,c,refresh,writable) {
 	if(!c)return [];
 	var result=[],id=c.identity || {},a=c.active;
@@ -560,14 +577,12 @@ function summary(page,data,c,refresh,writable) {
 		var inspect=button(a.phase==='ready' ? _('Review & Apply') : _('Inspect all-node changes'),function() { reviewCluster(data,c,a,refresh,writable); },false);
 		result.push(widgets.section(_('Cluster transaction'),[
 			widgets.status(stateLabel(a.phase),a.phase==='ready' ? 'good' : 'warning'),
-			widgets.checkList([[id.name || _('Controller'),stateLabel(a.root.status),a.root.error ? 'error' : 'neutral']].concat(a.nodes.map(function(n) { return [n.name || n.id,stateLabel(n.status),n.error ? 'error' : 'neutral']; })))
+			clusterNodeList(data,c,a)
 		],[inspect,button(_('Roll back cluster change'),function() { return call('cluster_rollback',a.id).then(refresh).catch(notify); },!writable)]));
 	}
 	if(a && ['partial','failed'].indexOf(a.phase)>=0 && ['wireless','backhaul'].indexOf(page)>=0)result.push(widgets.section(_('Cluster transaction'),[
 		widgets.status(stateLabel(a.phase),'error'),widgets.failure(a.failure),
-		widgets.checkList([[id.name || _('Controller'),stateLabel(a.root.status),a.root.error ? 'error' : 'neutral']].concat(a.nodes.map(function(n) {
-			return [n.name || n.id,stateLabel(n.status),n.error ? 'error' : 'neutral'];
-		})))
+		clusterNodeList(data,c,a)
 	]));
 	if(page==='nodes' && id.role==='root'){
 		var nodes=(c.members || []).filter(function(n){return n.authorized!==false;}).map(function(n) {
