@@ -291,6 +291,34 @@ function write(ops) {
 	if (length(ops) && system(['/bin/sync'], 10000) != 0)
 		die('write_error: Configuration durability flush failed');
 }
+function steering_network_ready(timeout) {
+	let deadline=now()+timeout/1000,current=snapshot(),radios={},networks=[],steady=null,b=bus(1),complete=false;
+	for(let name,section in current.wireless || {})
+		if(index(name,'mm_')==0 && section.type=='wifi-iface' && section.values.disabled!='1')radios[section.values.device]=true;
+	for(let section in values(current.usteer || {}))if(section.type=='usteer') {
+		if(section.values.enabled=='0'){b?.disconnect();return true;}
+		networks=section.values.network || [];
+		if(type(networks)=='string')networks=filter(split(networks,' '),n=>length(n));
+	}
+	try {
+		while(now()<deadline) {
+			let ready=false;
+			try {
+				let wireless=request(b,'network.wireless','status',{});
+				ready=!length(filter(keys(radios),name=>wireless[name]?.up!==true || wireless[name]?.pending===true));
+				for(let network in networks) {
+					if(now()>=deadline){ready=false;break;}
+					let status=request(b,'network.interface.'+network,'status',{});
+					if(status.up!==true || !status.l3_device)ready=false;
+				}
+			} catch(e) {ready=false;}
+			if(ready){if(steady!=null && now()-steady>=0.5){complete=true;break;}steady ??= now();}
+			else steady=null;
+			if(now()<deadline)sleep(200);
+		}
+	} catch(e) {b?.disconnect();die(e.message);}
+	b?.disconnect();return complete;
+}
 function reload(ops, confirmation_deadline) {
 	reload_services(ops, {
 		now,
@@ -301,8 +329,9 @@ function reload(ops, confirmation_deadline) {
 			b?.disconnect();
 		},
 		available: (name) => fs.access('/etc/init.d/' + name),
+		network_ready: steering_network_ready,
 		service: (name, timeout, action) => system(['/etc/init.d/' + name,
-			name == 'usteer' ? steering_service_action(snapshot()) : action], timeout) == 0
+			name == 'usteer' && action != 'stop' ? steering_service_action(snapshot()) : action], timeout) == 0
 	}, confirmation_deadline);
 }
 function health(active) {
