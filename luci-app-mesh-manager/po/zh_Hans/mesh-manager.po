@@ -2738,3 +2738,12 @@ msgstr "轮换网络 CA"
 
 msgid "CA rotation started."
 msgstr "CA 轮换已开始。"
+
+msgid "Generate new SAE key"
+msgstr "生成新 SAE 密钥"
+
+msgid "SAE key rotation"
+msgstr "SAE 密钥轮换"
+
+msgid "Generate a new wireless backhaul key, then Save & Apply to review and approve the change. All APs require a verified wired connection."
+msgstr "生成新的无线回程密钥，再保存并应用以预览和批准变更。所有 AP 均需已验证的有线连接。"

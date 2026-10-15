@@ -398,6 +398,10 @@ function unifiedForm(data,c,refresh,writable,page) {
 	meshid.maxLength=32; meshkey.maxLength=63; meshkey.minLength=16; channel.min=1; channel.max=233;
 	key.placeholder=_('Leave empty to keep current password');
 	meshkey.placeholder=_('Keep existing or generate automatically');
+	var generate=button(_('Generate new SAE key'),function() {
+		if(!writable || editor.mmLocked || backhaul.value==='wired')return;
+		meshkey.value=(requestId()+requestId()).slice(0,48);
+	});
 	function candidate() {
 		var path={mode:backhaul.value};
 		if(b.control_vlan!=null)path.control_vlan=b.control_vlan;
@@ -419,6 +423,7 @@ function unifiedForm(data,c,refresh,writable,page) {
 	}
 	function visibility() {
 		meshid.disabled=meshkey.disabled=channel.disabled=width.disabled=backhaul.value==='wired';
+		generate.disabled=!writable || backhaul.value==='wired' || !!(editor && editor.mmLocked);
 		ssid.disabled=key.disabled=enc.disabled=!enabled.checked;
 		ssid.required=enabled.checked; meshid.required=backhaul.value!=='wired';
 		if(policyFields)policyFields.hidden=!customPolicy.checked;
@@ -448,6 +453,7 @@ function unifiedForm(data,c,refresh,writable,page) {
 	] : [
 		field(_('Mesh ID'),meshid,_('802.11s backhaul identifier, separate from the client SSID. All managed backhaul radios must use the same identifier.')),
 		field(_('Independent SAE passphrase'),meshkey,_('Leave empty to keep the existing wireless backhaul secret, including when switching between wireless and wired preferred modes. A new wireless backhaul generates an independent random secret automatically.')),
+		field(_('SAE key rotation'),generate,_('Generate a new wireless backhaul key, then Save & Apply to review and approve the change. All APs require a verified wired connection.')),
 		field(_('Backhaul channel'),channel,_('A shared fixed channel for the selected backhaul band. Regulatory limits and DFS waiting periods still apply.')),
 		field(_('Channel width'),width,_('All backhaul radios must support this width; a higher width does not guarantee higher throughput.'))
 	];
@@ -491,6 +497,7 @@ function unifiedForm(data,c,refresh,writable,page) {
 		var stale=(latest.version || 0)!==initialVersion;
 		if(next.cluster && (next.mesh_enabled===false || migration.pending(next.cluster)))busy=true;
 		widgets.lockEditor(editor,!writable || sending || !!busy || stale);
+		generate.disabled=editor.mmLocked || backhaul.value==='wired';
 		var drift=next.cluster && next.drift && next.drift.length;
 		save.disabled=!writable || !widgets.recoveryReady(capabilities) || sending || !!busy || stale || !!drift;
 		save.title=drift ? _('Resolve managed differences on Nodes before applying changes.') : '';
