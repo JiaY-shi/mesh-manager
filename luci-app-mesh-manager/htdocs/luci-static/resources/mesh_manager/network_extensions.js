@@ -33,8 +33,25 @@ function form(current, controls) {
 					from:'lan',protocol:pieces[0].toLowerCase(),ports:(pieces[1] || '').split(',').map(Number)}; }) : []};
 		} };
 	});
-	return { element:E('div',{},entries.map(function(n) { return n.element; })),value:function() {
-		return {networks:entries.map(function(n) { return n.value(); })};
+	var old=current.wifi && current.wifi.planning || {},enabled=checkbox(old.enabled===true),
+		six=select([['off',_('Disabled')],['prefer',_('Use when available')],['require',_('Require on every node')]],old.six_ghz || 'off'),
+		channel=select([['auto',_('Automatic')],['keep',_('Keep current')]],old.channel || 'auto'),
+		power=select([['auto',_('Automatic')],['keep',_('Keep current')]],old.power || 'auto'),ceiling=input(String(old.max_txpower_dbm || 20),'number'),country=input(old.country || ''),
+		bands=['2g','5g','6g'].map(function(band) { return {band:band,control:checkbox((old.bands || ['2g','5g','6g']).indexOf(band)>=0)}; });
+	ceiling.min=1;ceiling.max=30;ceiling.step=1;
+	country.maxLength=2;country.pattern='[A-Z]{2}';country.placeholder='CN';
+	return { element:E('div',{},entries.map(function(n) { return n.element; }).concat([
+		widgets.details(_('Automatic radio planning'),[E('div',{'class':'mm-form'},[
+			field(_('Enable planning'),enabled),field(_('Client bands'),E('div',{'class':'mm-radio-list'},bands.map(function(b) { return E('label',{},[b.control,' ',b.band==='2g' ? '2.4 GHz' : b.band==='5g' ? '5 GHz' : '6 GHz']); }))),
+			field(_('6 GHz policy'),six,_('6 GHz requires WPA3. Nodes without 6 GHz use their other selected bands when available.')),
+			field(_('Country code'),country,_('Use the actual country of operation. To change it, first apply with channels and power kept; then preview automatic planning after the driver refreshes.')),
+			field(_('Client channels'),channel,_('Planning uses legal driver frequencies and passive load observations. A radio shared with wireless backhaul keeps the coordinated backhaul channel.')+' '+_('Native 5 GHz coexistence may exchange the primary and secondary channels within the approved block.')),
+			field(_('Transmit power'),power),field(_('Power ceiling (dBm)'),ceiling,_('Choose the highest driver power candidate at or below the ceiling. If none is available, planning is refused. Actual driver power is checked before confirmation.'))
+		])])
+	])), value:function() {
+		return { networks:entries.map(function(n) { return n.value(); }),planning:{enabled:enabled.checked,
+			bands:bands.filter(function(b) { return b.control.checked; }).map(function(b) { return b.band; }),six_ghz:six.value,
+			channel:channel.value,power:power.value,max_txpower_dbm:Number(ceiling.value),country:country.value || null} };
 	} };
 }
 return baseclass.extend({ form:form });

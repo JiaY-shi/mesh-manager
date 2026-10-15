@@ -2,11 +2,12 @@
 'use strict';
 import { clone, equal } from './model.uc';
 import { job_token } from './rpc_jobs.uc';
+import { radio_targets as mapped_targets, RADIO_LIMIT, INTERFACE_LIMIT } from './radio_mapping.uc';
 
 // The helper bounds its library calls at two seconds from main(). The
 // supervisor also covers fork/exec and reaping, so reserve 500 ms for those
 // steps while retaining the absolute limit for the complete diagnostic.
-const RADIO_LIMIT=8,INTERFACE_LIMIT=4,RESULT_LIMIT=65536,BUDGET_MS=20000,HELPER_MS=2500;
+const RESULT_LIMIT=65536,BUDGET_MS=20000,HELPER_MS=2500;
 const FLAGS=['no_10mhz','no_20mhz','no_ht40+','no_ht40-','no_80mhz','no_160mhz','no_he','no_ir','indoor_only'];
 const HELPER_ISSUES=['dfs_not_exposed','no_running_interface','country_unavailable','country_invalid',
 	'reported_channel_unavailable','reported_channel_invalid','reported_frequency_unavailable','reported_frequency_invalid',
@@ -50,31 +51,7 @@ function configured(section) {
 		txpower:decimal(txpower,63)};
 }
 
-// This same bounded selection lets the service capture real kernel bindings
-// and hostapd status without guessing radio0 == phy0 or selecting by UI input.
-export function radio_targets(snapshot) {
-	if(type(snapshot?.wireless)!='object')die('backend_unavailable: Wireless configuration is unavailable');
-	let wireless=snapshot.wireless,radios=sort(filter(keys(wireless),key=>wireless[key]?.type=='wifi-device')),plans=[];
-	for(let radio in slice(radios,0,RADIO_LIMIT)) {
-		let runtime=snapshot.netifd?.[radio],raw=runtime?.interfaces,interfaces=[],complete=type(runtime)=='object' && type(raw)=='array';
-		for(let iface in type(raw)=='array'?raw:[]) {
-			let section=iface?.section,ifname=iface?.ifname,options=wireless[section]?.values,mode=options?.mode;
-			if(!name(section,64) || !name(ifname,15) || wireless[section]?.type!='wifi-iface' || options?.device!=radio ||
-				index(['ap','sta','mesh','adhoc','monitor','wds'],mode)<0 ||
-				length(filter(interfaces,row=>row.section==section || row.ifname==ifname))) { complete=false;continue; }
-			push(interfaces,{section,ifname,mode});
-		}
-		sort(interfaces,(a,b)=>{
-			let ranka=a.section=='mm_ap_'+radio && a.mode=='ap'?0:a.mode=='ap'?1:2,
-				rankb=b.section=='mm_ap_'+radio && b.mode=='ap'?0:b.mode=='ap'?1:2;
-			return ranka!=rankb?ranka-rankb:a.section!=b.section?a.section<b.section?-1:1:a.ifname<b.ifname?-1:a.ifname>b.ifname?1:0;
-		});
-		let truncated=length(interfaces)>INTERFACE_LIMIT;
-		push(plans,{radio,interfaces:slice(interfaces,0,INTERFACE_LIMIT),interfaces_complete:complete && !truncated,
-			interfaces_truncated:truncated});
-	}
-	return {radio_total:length(radios),truncated:length(radios)>RADIO_LIMIT,radios:plans};
-}
+export function radio_targets(snapshot) { return mapped_targets(snapshot); }
 function channels(value,issues) {
 	let result=empty_axis('channels');
 	if(!fields(value,['status','complete','truncated','items']) || index(['complete','partial','unavailable'],value.status)<0 ||
@@ -126,7 +103,7 @@ function empty_reported() {
 	return {channel:null,frequency_mhz:null,country:null,txpower_dbm:null,txpower_offset_db:null,
 		actual_txpower_dbm:null,source:'libiwinfo',txpower_source:'unavailable'};
 }
-function helper(result,radio,ifname) {
+export function radio_helper(result,radio,ifname) {
 	let unavailable={phy:null,reported:empty_reported(),channels:empty_axis('channels'),power:empty_axis('power'),
 		issues:['helper_unavailable'],complete:false};
 	if(result?.code==-2)die('request_timeout: Radio helper exceeded its deadline');
@@ -217,7 +194,7 @@ export function local_radios(args,io) {
 	for(let plan in targets.radios) {
 		budget(HELPER_MS);let available=filter(plan.interfaces,iface=>number(before.bindings?.[iface.ifname]?.ifindex,1,2147483647) &&
 			number(before.bindings?.[iface.ifname]?.phyindex,0,2147483647) && name(before.bindings?.[iface.ifname]?.phy,64)),representative=available[0]?.ifname || null,
-			value=name(plan.radio,64)?helper(io.run(['/usr/libexec/mesh-manager-radio-info',plan.radio,...(representative?[representative]:[])],'',HELPER_MS),plan.radio,representative):
+			value=name(plan.radio,64)?radio_helper(io.run(['/usr/libexec/mesh-manager-radio-info',plan.radio,...(representative?[representative]:[])],'',HELPER_MS),plan.radio,representative):
 				{phy:null,reported:empty_reported(),channels:empty_axis('channels'),power:empty_axis('power'),issues:['invalid_radio_name'],complete:false};
 		budget(0);push(rows,{radio:name(plan.radio,64)?plan.radio:null,phy:value.phy,representative_interface:representative,
 			configured:configured(before.wireless[plan.radio]),...value,interfaces:[],interfaces_complete:plan.interfaces_complete,

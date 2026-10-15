@@ -8,6 +8,7 @@ import { private_address } from './identity.uc';
 import { steering_plan, steering_policy_errors } from './roaming.uc';
 import { backhaul_mode } from './radio_modes.uc';
 import { network_errors, network_plan } from './network_extensions.uc';
+import { planning_errors, radio_plan, planning_radios } from './radio_planning.uc';
 
 export const CONTROLLER_ADDRESS_MESSAGE = 'Coordinated controller address migration is not implemented; preserve the existing static LAN address';
 export function validate_controller_management(local, address, lan) {
@@ -137,6 +138,7 @@ export function validate_extended(i) {
 	delete base.control;
 	delete base.networks;
 	delete base.wifi?.roaming;
+	delete base.wifi?.planning;
 	errors = [...errors, ...validate(base)];
 	try {
 		validate_overrides(i.local);
@@ -184,6 +186,7 @@ export function validate_extended(i) {
 	)
 		error('Invalid independent roaming policy');
 	for (let message in steering_policy_errors(r?.policy)) error(message);
+	for (let message in planning_errors(i.wifi?.planning)) error(message);
 	for (let message in network_errors(i.networks)) error(message);
 	return errors;
 }
@@ -197,6 +200,9 @@ export function compile_extended(i, snapshot, cap, owned, legacy, resume_steerin
 		push(errors, { code, message });
 	}
 	if (length(errors)) return { errors, ops: [], conflicts, warnings };
+	// Store the reviewed policy, while compiling only its selected client bands.
+	let selected_intent = clone(i);
+	selected_intent.wifi.radios = planning_radios(i, cap);
 	function field(config, section, option, after, reason) {
 		let old = snapshot[config]?.[section];
 		if (!old) {
@@ -284,13 +290,17 @@ export function compile_extended(i, snapshot, cap, owned, legacy, resume_steerin
 	delete base.local;
 	delete base.networks;
 	delete base.wifi.roaming;
+	delete base.wifi.planning;
 	delete base.control;
+	base.wifi.radios = clone(selected_intent.wifi.radios);
 	let plan = legacy(base, virtual, cap, owned);
 	errors = [...errors, ...plan.errors];
 	conflicts = [...conflicts, ...plan.conflicts];
 	warnings = filter(plan.warnings, (w) => index(w, 'No remote pairing') < 0);
 	let r = i.wifi.roaming,
 		b = i.backhaul;
+	let tuning = radio_plan(i, snapshot, cap, owned);
+	errors = [...errors, ...tuning.errors]; extra = [...extra, ...tuning.ops]; warnings = [...warnings, ...tuning.warnings];
 	if (r.r && !cap.ft) {
 		if (index(cap.wireless_probe_errors || [], 'ft') >= 0)
 			fail('wireless_probe_unavailable', 'Wireless capability probe failed; retry the preflight');
@@ -299,6 +309,10 @@ export function compile_extended(i, snapshot, cap, owned, legacy, resume_steerin
 	for (let op in plan.ops)
 		if (op.config == 'wireless' && op.option == null && match(op.section, /^mm_ap_/) && op.after) {
 			let v = op.after.values;
+			if (snapshot.wireless[v.device]?.values.band == '6g') {
+				if (i.wifi.encryption != 'sae-mixed') fail('six_ghz_security', '6 GHz requires WPA3-capable encryption and protected management frames');
+				else { v.encryption = 'sae'; v.ieee80211w = '2'; v.sae_pwe = '1'; }
+			}
 			v.ieee80211k = r.k ? '1' : '0';
 			v.rrm_neighbor_report = r.k ? '1' : '0';
 			v.rrm_beacon_report = r.k ? '1' : '0';
@@ -576,24 +590,32 @@ export function compile_extended(i, snapshot, cap, owned, legacy, resume_steerin
 		for (let name in ['mm_mesh_link'])
 			if (snapshot.network[name])
 				section('network', name, 'interface', null, 'remove obsolete mesh link');
-		// Drop the backhaul radio constraint using its first takeover value, not the last intent.
+	}
+	// Restore the first takeover values when a radio no longer carries backhaul.
+	{
 		for (let owner in owned || []) {
 			if (owner.config != 'wireless' ||
 				!(owner.option == 'channel' && owner.reason == 'coordinated backhaul channel' ||
-					owner.option == 'htmode' && owner.reason == 'coordinated width')) continue;
+					owner.option == 'htmode' && owner.reason == 'coordinated width') ||
+				b.mode != 'wired' && owner.section == i.local.mesh_radio) continue;
 			let current = snapshot.wireless?.[owner.section];
 			if (owner.type != 'wifi-device' || current?.type != owner.type ||
 				!equal(current.values[owner.option] ?? null, owner.after)) {
 				fail('ownership_conflict', 'Managed radio tuning changed before restoration: ' + owner.section + '.' + owner.option);
 				continue;
 			}
+			// The client planner may now own the former backhaul field.
+			// Do not overwrite its approved choice or its reason
+			// with the original backhaul value; the journal retains that baseline.
+			if (length(filter(tuning.ops, op => op.config == owner.config &&
+				op.section == owner.section && op.option == owner.option))) continue;
 			field('wireless', owner.section, owner.option, clone(owner.before), 'restore local radio tuning');
 		}
 	}
 	if (!i.wifi.enabled && length(filter(i.networks || [], n => n.enabled)))
-		for (let radio in i.wifi.radios)
+		for (let radio in selected_intent.wifi.radios)
 			field('wireless', radio, 'disabled', '0', 'enable selected radio');
-	let networks = network_plan(i, snapshot, cap, owned, ports);
+	let networks = network_plan(selected_intent, snapshot, cap, owned, ports);
 	errors = [...errors, ...networks.errors];
 	extra = [...extra, ...networks.ops];
 	warnings = [...warnings, ...networks.warnings];

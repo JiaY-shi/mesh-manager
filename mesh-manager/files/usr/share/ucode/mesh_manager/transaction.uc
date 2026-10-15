@@ -9,6 +9,7 @@ import { steering_owned } from './roaming.uc';
 import { validate_settings } from './local_settings.uc';
 import { history_used, history_restored, clear_retained_history } from './history_retention.uc';
 import { recovery_path } from './controller_loss.uc';
+import { approved_radio_choices, committed_radio_choices } from './radio_planning.uc';
 
 const TERMINAL = ['committed', 'rolled_back', 'rollback_conflict', 'expired'];
 const STATES = [
@@ -350,7 +351,9 @@ export function engine(io) {
 				else baseline[op.config][op.section].values[op.option] = clone(op.after);
 			}
 		}
-		let compiled = compile(intent, baseline, io.capabilities(snapshot, false, intent), s.owned),
+		let cap=io.capabilities(snapshot,false,intent), choices=committed_radio_choices(intent,cap,s.owned);
+		if (choices==null) die('repair_scope_conflict: Committed radio ownership is invalid');
+		let compiled = compile(intent, baseline, {...cap,approved_radio_choices:choices}, s.owned),
 			errors = clone(compiled.errors), ops = [], expected_owned = clone(s.owned);
 		function fail(op) {
 			push(errors, { code: 'repair_scope_conflict',
@@ -442,8 +445,13 @@ export function engine(io) {
 			die('ownership_conflict: Managed fields have external changes');
 		if (release) {
 			plan = release_plan(s, snapshot);
-		} else plan = compile(intent, snapshot, io.capabilities(snapshot, false, intent), s.owned,
-			mesh_enabled === true && s.saved_steering_managed === true);
+		} else {
+			let choices=approved_radio_choices(approval?.ops);
+			if (choices==null) die('preview_changed: Approved radio choices are invalid');
+			let cap=io.capabilities(snapshot,false,intent);
+			plan = compile(intent, snapshot, {...cap,approved_radio_choices:choices}, s.owned,
+				mesh_enabled === true && s.saved_steering_managed === true);
+		}
 		if (length(plan.errors))
 			die(
 				'preflight_failed: ' +

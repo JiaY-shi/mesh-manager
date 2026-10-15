@@ -18,6 +18,7 @@ over Ethernet or wirelessly using the controller's Wi-Fi name and password.
 - Network topology, node status, backhaul quality, clients, and change history.
 - Configuration previews and automatic rollback when health confirmation fails.
 - Automatic Guest VLAN and subnet allocation, with separate credentials and access policies.
+- Client band, channel, width, and power planning using hardware and regulatory limits.
 - Restore original managed settings when disabling Mesh and rejoin after leaving.
 
 ## Installation
@@ -142,7 +143,7 @@ Resolve any reported external configuration conflicts before continuing.
 
 802.11k/v/r behavior depends on client support; clients decide when to roam.
 
-### Guest networks
+### Guest and automatic radio planning
 
 On the controller, open **Wireless → Advanced settings** to enable Guest and set
 a separate password. Use `auto` for VLAN and subnet allocation, or select an
@@ -154,6 +155,23 @@ Guest defaults to Internet access, client isolation on the same AP, and restrict
 access to the main LAN. You can disable Internet access or client isolation,
 allow mutual LAN access, or allow selected LAN-to-Guest service ports. Write
 port exceptions as `TCP:80,443;UDP:123`.
+
+Select client bands and keep or automatically plan channels and transmit power.
+Use the actual country of operation. To change the country, first apply with
+channels and power kept, then preview planning after the driver refreshes.
+Radios shared with wireless backhaul keep the coordinated backhaul channel.
+Approved channel choices remain fixed for that application; fresh regulatory and
+hardware checks still run before staging. On independent 5 GHz radios, native
+coexistence may exchange the primary and secondary channels within the approved
+block. Confirmation checks actual channel, width, center frequency and power;
+radios shared with wireless backhaul require the exact coordinated primary.
+
+Each node selects its highest driver power candidate at or below the ceiling.
+For an 18 dBm ceiling, candidates of 15/20 dBm select 15 dBm; a node limited to
+16 dBm selects 16 dBm. No suitable candidate rejects the change. Confirmation
+also checks the actual power reported by the driver. 6 GHz uses WPA3. Prefer
+allows nodes without 6 GHz to use their other selected bands; Require demands
+support on every node.
 
 ## License
 

@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: GPL-2.0-only
 'use strict';
 import * as fs from 'fs';
-import { regulatory_query, regulatory_binding, regulatory_request } from 'mesh_manager.regulatory_worker';
+import { regulatory_query, regulatory_binding, regulatory_phy_binding, regulatory_request } from 'mesh_manager.regulatory_worker';
 
 function monotonic() {
 	let uptime=fs.readfile('/proc/uptime'),first=type(uptime)=='string'?split(uptime,' ')[0]:null;
@@ -19,6 +19,7 @@ try {
 	try { nl=require('nl80211'); }catch(e) { die('backend_unavailable: Official regulatory module is unavailable'); }
 	if(type(nl?.request)!='function' || type(nl?.const)!='object')die('backend_unavailable: Official regulatory module is unavailable');
 	result=regulatory_query(target,{started_at,now:monotonic,binding:ifname=>regulatory_binding(ifname,{read:fs.readfile,stat:fs.stat,readlink:fs.readlink}),
+		phy_binding:phy=>regulatory_phy_binding(phy,{read:fs.readfile,stat:fs.stat}),
 		get:(operation,attrs)=>{
 			let command={GET_REG:nl.const.NL80211_CMD_GET_REG,GET_WIPHY:nl.const.NL80211_CMD_GET_WIPHY,GET_INTERFACE:nl.const.NL80211_CMD_GET_INTERFACE}[operation];
 			if(type(command)!='int')die('backend_unavailable: Official GET operation is unavailable');

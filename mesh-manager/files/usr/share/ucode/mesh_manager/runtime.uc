@@ -28,6 +28,8 @@ import { cached_wireless_features } from './capability_features.uc';
 import { wireless_link_compatibility } from './wireless_compatibility.uc';
 import { handoff_check, handoff_stamp } from './first_handoff.uc';
 import { radio_modes } from './radio_modes.uc';
+import { planning_radios } from './radio_planning.uc';
+import { planning_power_health } from './radio_power_runtime.uc';
 import { business_dhcp_ready } from './business_health.uc';
 import { extension_bridge, extension_device } from './network_extensions.uc';
 
@@ -233,6 +235,8 @@ export function capabilities(snapshot, cached, intent) {
 	if (!cached && result.usteer) result.usteer_support = steering_capabilities(b);
 	if (!cached && length(filter(intent?.networks || [],n=>n.enabled)))
 		result.business_inventory=network_inventory(call(b,'network.interface','dump'));
+	if (!cached && intent?.wifi?.planning?.enabled === true)
+		result.planning = require('mesh_manager.radio_planning_worker').observe(snapshot, b);
 	b?.disconnect();
 	return result;
 }
@@ -350,6 +354,9 @@ function health(active) {
 		current = snapshot();
 	checks = [...checks, ...steering_verify(current,active,b)];
 	checks = [...checks, ...lan_service_health(current, name => call(b,'service','list',{name}))];
+	if(active.kind!='release' && active.intent?.wifi?.planning?.enabled &&
+		(active.intent.wifi.planning.power=='auto' || active.intent.wifi.planning.channel=='auto'))
+		checks=[...checks,...planning_power_health(active.intent,current,b)];
 	let lan = call(b, 'network.interface.lan', 'status');
 	push(checks, {
 		name: 'management_interface',
@@ -378,7 +385,8 @@ function health(active) {
 		});
 	if (active.kind != 'release' && active.intent?.wifi?.enabled) {
 		let wireless = call(b, 'network.wireless', 'status') || {};
-		for (let radio in active.intent.wifi.radios) {
+		for (let radio in planning_radios(active.intent, { radios: map(filter(keys(current.wireless),
+			name => current.wireless[name].type == 'wifi-device'), name => ({ name, band: current.wireless[name].values.band })) })) {
 			let interfaces = wireless[radio]?.interfaces || [];
 			let ap = filter(interfaces, (iface) => iface.section == 'mm_ap_' + radio)[0];
 			push(checks, {
@@ -391,7 +399,8 @@ function health(active) {
 	}
 	if (active.kind != 'release' && active.intent?.schema == 2) {
 		let wireless = call(b, 'network.wireless', 'status') || {},
-			radios = active.intent.wifi.radios;
+			radios = planning_radios(active.intent, { radios: map(filter(keys(current.wireless),
+				name => current.wireless[name].type == 'wifi-device'), name => ({ name, band: current.wireless[name].values.band })) });
 		for (let network in active.intent.networks || []) {
 			if (!network.enabled) continue;
 			let name = 'mm_' + network.id, status = call(b, 'network.interface.' + name, 'status'),

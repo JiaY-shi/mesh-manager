@@ -405,9 +405,10 @@ function unifiedForm(data,c,refresh,writable,page) {
 		if(customPolicy.checked) {
 			roaming.policy={};Object.keys(thresholds).forEach(function(name) { roaming.policy[name]=Number(thresholds[name].value); });
 		}
-		var extra=networks.value();
+		var extra=networks.value(), planning=page==='wireless' ? extra.planning : w.planning;
 		return {schema:2,name:current.name || c.identity.name || 'Mesh',wifi:{enabled:enabled.checked,ssid:ssid.value,encryption:enc.value,key:key.value || null,
-			roaming:roaming},backhaul:path,networks:page==='wireless' ? extra.networks : current.networks || []};
+			roaming:roaming,...(planning ? {planning:planning} : {})},backhaul:path,
+			networks:page==='wireless' ? extra.networks : current.networks || []};
 	}
 	function needsMaintenance(path) {
 		return !!current.backhaul && (path.key!=null || ['mode','mesh_id','channel','htmode','control_vlan'].some(function(name) { return path[name]!==b[name]; }));

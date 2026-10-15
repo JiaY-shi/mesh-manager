@@ -2484,11 +2484,29 @@ msgstr "后台服务正在停止"
 msgid "Updating background services"
 msgstr "后台服务调整中"
 
+msgid "6 GHz policy"
+msgstr "6 GHz 策略"
+
+msgid "6 GHz requires WPA3. Nodes without 6 GHz use their other selected bands when available."
+msgstr "6 GHz 需要 WPA3。没有 6 GHz 的节点使用其他已选可用频段。"
+
 msgid "Allow mutual access with LAN"
 msgstr "允许与主 LAN 互访"
 
+msgid "Automatic"
+msgstr "自动"
+
+msgid "Automatic radio planning"
+msgstr "自动射频规划"
+
 msgid "Business subnet"
 msgstr "业务子网"
+
+msgid "Client bands"
+msgstr "客户端频段"
+
+msgid "Client channels"
+msgstr "客户端信道"
 
 msgid "Client isolation"
 msgstr "客户端隔离"
@@ -2496,8 +2514,14 @@ msgstr "客户端隔离"
 msgid "Isolate wireless clients on the same AP. Guest access to LAN is controlled separately."
 msgstr "隔离同一 AP 上的无线客户端。Guest 对主 LAN 的访问由独立策略控制。"
 
+msgid "Country code"
+msgstr "国家码"
+
 msgid "Enable network"
 msgstr "启用网络"
+
+msgid "Enable planning"
+msgstr "启用规划"
 
 msgid "Guest network"
 msgstr "访客网络"
@@ -2505,11 +2529,26 @@ msgstr "访客网络"
 msgid "Internet access"
 msgstr "允许上网"
 
+msgid "Keep current"
+msgstr "保留当前值"
+
 msgid "LAN access exceptions"
 msgstr "主 LAN 访问例外"
 
 msgid "Optional LAN-to-network service ports, for example TCP:80,443;UDP:123. Used when mutual LAN access is disabled."
 msgstr "可选的主 LAN 到此网络的服务端口，例如 TCP:80,443;UDP:123。用于未开启主 LAN 互访时。"
+
+msgid "Planning uses legal driver frequencies and passive load observations. A radio shared with wireless backhaul keeps the coordinated backhaul channel."
+msgstr "规划依据驱动允许的频率和被动观测的负载。与无线回程共用的射频保留统一回程信道。"
+
+msgid "Power ceiling (dBm)"
+msgstr "功率上限（dBm）"
+
+msgid "Require on every node"
+msgstr "所有节点必须支持"
+
+msgid "Transmit power"
+msgstr "发射功率"
 
 msgid "Use an independent password for this network. Leave empty to keep its existing password."
 msgstr "为此网络使用独立密码。留空以保留其现有密码。"
@@ -2520,8 +2559,20 @@ msgstr "填写 auto 或网关地址为 .1 的私有 /24 子网。DHCP 由路由�
 msgid "Use auto to allocate a free VLAN. The control VLAN is reserved."
 msgstr "填写 auto 以分配空闲 VLAN。管理控制 VLAN 为保留值。"
 
+msgid "Use the actual country of operation. To change it, first apply with channels and power kept; then preview automatic planning after the driver refreshes."
+msgstr "填写设备实际使用地区的国家码。修改时先保留信道和功率进行应用，驱动刷新后再预览自动规划。"
+
+msgid "Use when available"
+msgstr "可用时启用"
+
 msgid "VLAN ID"
 msgstr "VLAN ID"
+
+msgid "Native 5 GHz coexistence may exchange the primary and secondary channels within the approved block."
+msgstr "原生 5 GHz 共存机制可在批准的信道块内交换主、副信道。"
+
+msgid "Choose the highest driver power candidate at or below the ceiling. If none is available, planning is refused. Actual driver power is checked before confirmation."
+msgstr "选择不超过上限的最高驱动候选功率。没有可用档位时拒绝规划，确认前检查驱动实际功率。"
 
 msgid "Allow traffic in both directions between this network and the main LAN. Guest client isolation is configured separately."
 msgstr "允许此网络与主 LAN 双向互访。访客客户端隔离单独配置。"

@@ -62,7 +62,7 @@ function projected(value,target) {
 	return {radio:value.radio,phy:value.phy,status:value.status,complete:value.complete,
 		regulatory:clone(reg),current:clone(current),frequencies:clone(freq),issues:clone(value.issues)};
 }
-function helper(result,target) {
+export function regulatory_result(result,target) {
 	let row=regulatory_empty(target.radio,target.phy,target.configured_country);row.issues=['helper_unavailable'];
 	if(result?.code==-2)die('request_timeout: Regulatory helper exceeded its deadline');
 	if(index([0,1],result?.code)<0 || type(result.stdout)!='string' || !length(result.stdout) || length(result.stdout)>65536)return row;
@@ -96,7 +96,7 @@ export function local_regulatory(args,io) {
 		else {
 			let target={schema:1,radio:plan.radio,phy:binding.phy,phyindex:binding.phyindex,configured_country:country(configured)?configured:null,
 				interfaces:map(selected,iface=>({ifname:iface.ifname,binding:clone(before.bindings[iface.ifname])}))};
-			budget(2500);row=helper(io.run(['/usr/bin/ucode','/usr/libexec/mesh-manager-radio-regulatory'],sprintf('%J',target),2500),target);budget(0);
+			budget(2500);row=regulatory_result(io.run(['/usr/bin/ucode','/usr/libexec/mesh-manager-radio-regulatory'],sprintf('%J',target),2500),target);budget(0);
 		}
 		if(configured!==null && !country(configured))add(row.issues,'configured_country_invalid');
 		if(!plan.interfaces_complete || length(selected)!=length(plan.interfaces))add(row.issues,plan.interfaces_truncated?'interfaces_truncated':'interfaces_incomplete');

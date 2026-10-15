@@ -48,6 +48,24 @@ export function regulatory_valid_binding(value) {
 		regulatory_number(value.ifindex,1,2147483647) && regulatory_number(value.phyindex,0,2147483647) &&
 		regulatory_name(value.phy,63) && directory(value.interface_directory) && directory(value.phy_directory) && value.up===true;
 }
+export function regulatory_valid_phy_binding(value) {
+	return regulatory_fields(value,['phy','phyindex','phy_directory']) && regulatory_name(value.phy,63) &&
+		regulatory_number(value.phyindex,0,2147483647) && directory(value.phy_directory);
+}
+export function regulatory_phy_binding(phy,io) {
+	if (!regulatory_name(phy,63)) return null;
+	let path='/sys/class/ieee80211/'+phy;
+	function capture() {
+		let dir=io.stat(path),text=io.read(path+'/index'),raw=type(text)=='string' ? trim(text) : '';
+		if (dir?.type!='directory' || type(text)!='string' || length(text)>11 ||
+			(text!=raw && text!=raw+'\n') || index(raw,'\n')>=0 || index(raw,'\r')>=0 || index(raw,'\0')>=0 ||
+			!match(raw,/^(0|[1-9][0-9]{0,9})$/)) return null;
+		let value={phy,phyindex:int(raw),phy_directory:{dev:clone(dir.dev),inode:dir.inode}};
+		return regulatory_valid_phy_binding(value) ? value : null;
+	}
+	let before=capture(),after=capture();
+	return before && equal(before,after) ? before : null;
+}
 // Shared by the service and the short-lived worker. Follow actual sysfs links;
 // a renamed PHY never gets an index inferred from its name.
 export function regulatory_binding(ifname,io) {
@@ -170,10 +188,14 @@ function current(raw,target,issues) {
 	return result;
 }
 export function regulatory_request(input) {
-	if(!regulatory_fields(input,['schema','radio','phy','phyindex','configured_country','interfaces']) || input.schema!==1 ||
+	let idle=input?.schema===2;
+	if(!regulatory_fields(input,idle ? ['schema','radio','phy','phyindex','configured_country','interfaces','phy_binding'] :
+		['schema','radio','phy','phyindex','configured_country','interfaces']) || index([1,2],input.schema)<0 ||
 		!regulatory_name(input.radio,64) || !regulatory_name(input.phy,63) || !regulatory_number(input.phyindex,0,2147483647) ||
 		input.configured_country!==null && !regulatory_country(input.configured_country) ||
-		type(input.interfaces)!='array' || !length(input.interfaces) || length(input.interfaces)>4)
+		type(input.interfaces)!='array' || (!idle && !length(input.interfaces)) || length(input.interfaces)>4 ||
+		idle && (length(input.interfaces) || !regulatory_valid_phy_binding(input.phy_binding) ||
+			input.phy_binding.phy!=input.phy || input.phy_binding.phyindex!=input.phyindex))
 		die('invalid_request: Invalid private regulatory target');
 	let names=[];
 	for(let target in input.interfaces) {
@@ -193,7 +215,10 @@ export function regulatory_query(input,io) {
 	let deadline=start+2000,last_now=start;
 	function budget() { let now=io.now();if(!regulatory_number(now,0,9007199254740991) || now<last_now || now>=deadline)die('budget_exceeded: Regulatory query exceeded its deadline');last_now=now; }
 	function bindings() {
-		budget();for(let entry in target.interfaces)if(!equal(io.binding(entry.ifname),entry.binding))die('target_changed: Actual kernel interface binding changed');budget();
+		budget();
+		if(target.schema===2 && !equal(io.phy_binding?.(target.phy),target.phy_binding))
+			die('target_changed: Actual kernel PHY binding changed');
+		for(let entry in target.interfaces)if(!equal(io.binding(entry.ifname),entry.binding))die('target_changed: Actual kernel interface binding changed');budget();
 	}
 	function get(command,attrs) { budget();let value=null;try { value=io.get(command,attrs); }catch(e) {}budget();bindings();return type(value)=='object'?clone(value):null; }
 	bindings();let device_before=get('GET_REG',{wiphy:target.phyindex}),global_before=get('GET_REG',{}),
@@ -217,7 +242,8 @@ export function regulatory_query(input,io) {
 	if(changed || ambiguous || length(filter(currents,value=>value.mlo))) {
 		row.current=regulatory_empty_current();row.current.mlo=length(filter(currents,value=>value.mlo))>0;
 		regulatory_add(issues,changed?'current_changed':ambiguous?'ambiguous_current':'mlo_unsupported');
-	} else row.current=currents[0];
+	} else row.current=currents[0] || regulatory_empty_current();
+	if(!length(currents))regulatory_add(issues,'no_running_interface');
 	if(length(filter(currents,value=>value.status!='complete')))regulatory_add(issues,'interfaces_current_incomplete');
 	row.issues=issues;row.complete=!length(issues) && row.regulatory.status=='complete' && row.frequencies.status=='complete' && row.current.status=='complete';
 	row.status=regulatory_status(row.complete,row.regulatory.status!='unavailable' || row.frequencies.status!='unavailable' || row.current.status!='unavailable');
