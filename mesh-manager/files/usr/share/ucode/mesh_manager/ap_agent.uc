@@ -276,7 +276,20 @@ export function node_command(data, command, i, observed, handoff) {
 	} else die('invalid_method: Invalid controller command');
 	i.save('identity.json', data);
 }
-export function command_error(command, e) {
+export function command_error(command, e, previous, current) {
+	// A previously healthy sample may settle differently at native confirmation.
+	// Keep only the exact signed batch pending; its original watchdog/deadline
+	// and fresh native health/CAS checks remain authoritative on every retry.
+	let active = current?.active;
+	if (error_code(e) == 'unhealthy' && command.action == 'confirm' &&
+		previous?.status == 'awaiting_confirm' && previous.repair !== true &&
+		previous.mesh !== true && previous.catchup !== true &&
+		type(previous.transaction) == 'string' && previous.transaction === command.transaction &&
+		type(previous.version) == 'int' && previous.version >= 1 && previous.version === command.version &&
+		type(previous.transaction_id) == 'string' && length(previous.transaction_id) &&
+		active?.id === previous.transaction_id && active.request_id === previous.transaction &&
+		active.kind == 'configure' && active.mesh_enabled === null && active.status == 'awaiting_confirm' &&
+		type(active.remaining) == 'int' && active.remaining > 0) return null;
 	return {
 		id: command.id,
 		transaction: command.transaction,
@@ -477,7 +490,9 @@ export function ap_agent_tick() {
 		catch (e) {
 			if (error_code(e) == 'busy') return;
 			let previous = data.agent;
-			data.agent = command_error(reply.command, e);
+			let failed = command_error(reply.command, e, previous, current);
+			if (!failed) return;
+			data.agent = failed;
 			if ((data.agent.repair && previous?.repair || data.agent.mesh && previous?.mesh) &&
 				previous.transaction == reply.command.transaction) data.agent.transaction_id = previous.transaction_id;
 			i.save('identity.json', data);
