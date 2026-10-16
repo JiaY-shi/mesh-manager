@@ -191,13 +191,11 @@ function stopStatus(data,refresh,writable) {
 			window.setTimeout(function(){reviewStop(data,job,refresh,writable);},0);
 		else if(job.failure)ui.addNotification(null,widgets.failure(job.failure),'error');
 	}
-	if(!job || job.phase==='complete' && !job.node_id && data.mesh_enabled!==job.enabled)return null;
+	if(!job || terminal(job.phase))return null;
 	var members=data.cluster.members || [],actions=[];
 	if(job.phase==='ready')actions.push(button(_('Review restore preview'),function(){reviewStop(data,job,refresh,writable);},!writable));
-	if(!terminal(job.phase))
-		actions.push(button(_('Cancel'),function(){return call('mesh_stop_cancel',job.id).then(refresh).catch(notify);},!writable));
-	var message=job.phase==='complete' ? resultMessage(job.enabled) :
-		job.phase==='awaiting_confirm' ? _('Configuration restored. Confirm to finish disabling Mesh.') :
+	actions.push(button(_('Cancel'),function(){return call('mesh_stop_cancel',job.id).then(refresh).catch(notify);},!writable));
+	var message=job.phase==='awaiting_confirm' ? _('Configuration restored. Confirm to finish disabling Mesh.') :
 		job.phase==='ready' ? _('Restore preview is ready. Review and approve it before applying.') : label(job.phase);
 	var target=members.find(function(node){return node.id===job.node_id;});
 	var rows=job.nodes.map(function(node){
@@ -207,8 +205,7 @@ function stopStatus(data,refresh,writable) {
 	});
 	if(!job.node_id)rows.unshift([_('This device'),label(job.root.status),widgets.failure(job.root.error,'mesh-stop:'+job.id+':root') || '-']);
 	var body=[E('p',{'role':'status','aria-live':'polite'},[
-		widgets.status((target ? target.name+': ' : '')+message,job.phase==='complete' ? 'good' :
-			job.phase==='failed' || job.phase==='partial' ? 'error' : 'warning')
+		widgets.status((target ? target.name+': ' : '')+message,'warning')
 	])];
 	if(job.failure)body.push(widgets.failure(job.failure,'mesh-stop:'+job.id));
 	body.push(widgets.details(_('Node results'),[widgets.table([_('Node'),_('Status'),_('Details')],rows)]));

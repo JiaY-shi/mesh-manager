@@ -381,7 +381,7 @@ export function frozen_cluster_status(i, view) {
 			if (full) member.report.health = telemetry.health;
 			if (member.report.backhaul) member.report.backhaul.quality = telemetry.quality;
 		}
-	if (full || index(['nodes', 'wireless', 'backhaul'], view) >= 0)
+	if (full || index(['nodes', 'wireless', 'backhaul', 'history'], view) >= 0)
 		result.lifecycle = public_lifecycle(state?.lifecycle, full ? null : false);
 	if (full || view == 'history') {
 		result.lifecycle_history = state?.lifecycle_history || [];

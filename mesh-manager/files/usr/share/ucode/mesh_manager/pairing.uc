@@ -41,10 +41,11 @@ export function pairing_service(io) {
 			length(keys(s.requests)) > 64 ||
 			length(s.invitations) > 16 ||
 			type(s.version) != 'int' ||
-			type(s.history) != 'array' ||
-			s.revocations != null && (type(s.revocations)!='array' || length(s.revocations)>64)
+			type(s.history) != 'array'
 		)
 			die('corrupt_state: Invalid cluster state');
+		// Discard retired history on the next normal state write; reads stay read-only.
+		delete s.revocations;
 		return s;
 	}
 	function root() {
@@ -225,12 +226,6 @@ export function pairing_service(io) {
 			if (!previous && length(keys(s.members)) >= 64) die('limit_exceeded: Maximum 64 nodes');
 			if (previous && previous.certificate == crypto.fingerprint(q.cert))
 				die('invalid_identity: Re-enrollment requires a new node certificate');
-			if (previous) {
-				s.revocations=s.revocations || [];
-				push(s.revocations,{id:previous.id,name:previous.name,removed:previous.removed,
-					restoration_confirmed:true});
-				s.revocations=slice(s.revocations,-64);
-			}
 			let control = allocate_lease(s, q.id);
 			adopt_leases(s);
 			q.status = 'approved';
@@ -311,7 +306,6 @@ export function pairing_service(io) {
 					id: m.id,
 					name: m.name,
 					authorized: m.authorized,
-					...(m.authorized===false ? {removed:m.removed || null} : {}),
 					version: m.version,
 					status: m.status,
 					online: recent_presence(seen, io.boot(), io.presence_now?.() ?? io.now()),
@@ -367,9 +361,6 @@ export function pairing_service(io) {
 			result.history = s.history;
 			result.repair_history = s.repair_history || [];
 		}
-		if (full || view=='nodes' || view=='history')
-			result.revocations=map(s.revocations || [],r=>({id:r.id,name:r.name,removed:r.removed,
-				restoration_confirmed:r.restoration_confirmed===true}));
 		if (!full && result.active && index(['complete', 'partial', 'failed', 'rolled_back', 'expired'],
 			result.active.phase) >= 0 && index(['wireless', 'backhaul'], view) < 0) result.active = null;
 		return result;

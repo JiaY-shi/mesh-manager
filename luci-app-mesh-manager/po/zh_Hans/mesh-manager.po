@@ -2445,18 +2445,6 @@ msgstr "待命，保留远程管理"
 msgid "Recovery in progress"
 msgstr "正在恢复配置"
 
-msgid "Revocation records (%s)"
-msgstr "撤销记录（%s）"
-
-msgid "Revoked at"
-msgstr "撤销时间"
-
-msgid "Configuration restoration"
-msgstr "配置恢复"
-
-msgid "Needs verification"
-msgstr "待验证"
-
 msgid "Join Mesh"
 msgstr "加入 Mesh"
 

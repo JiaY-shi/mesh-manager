@@ -151,20 +151,9 @@ function managementChanged(ops) {
 	return !before || !after || JSON.stringify(before)!==JSON.stringify(after);
 }
 
-function transaction(data, refresh, writable, page) {
+function transaction(data, refresh, writable) {
 	var a = data.active;
-	if (!a) return E('div');
-	if (terminal(a.status)) {
-		var job=data.cluster && data.cluster.lifecycle;
-		if(['nodes','history'].indexOf(page)<0 || page==='nodes' && job && job.root.transaction_id===a.id)return E('div');
-		return widgets.section(_('Latest local change'),[
-			widgets.status(stateLabel(a.status),a.status==='committed' ? 'good' : a.status==='rollback_conflict' ? 'error' : 'warning'),
-			a.failure ? widgets.failure(a.failure,'active:'+a.id) : E('span'),
-			(a.conflicts || []).length ? widgets.details(_('Conflicts'),[table([_('Setting'),_('Details')],a.conflicts.map(function(c){
-				return [c.path,_('External change preserved; manual recovery required')];
-			}))]) : E('span')
-		]);
-	}
+	if (!a || terminal(a.status)) return E('div');
 	var actions = [], pending = a.status === 'awaiting_confirm', inFlight = !!transactionActions[a.id];
 	function perform(method) {
 		return transactionAction(method,a.id).then(refresh).catch(function(error) { notify(error); return refresh(); });
@@ -304,7 +293,7 @@ function content(page, data, refresh, writable) {
 	if(page==='advanced')return result;
 	if(['overview','diagnostics'].indexOf(page)>=0)result.push(diagnostics.attention(data,page==='diagnostics'));
 	if (!widgets.recoveryReady(cap) && (!data.attention || !data.mesh_enabled || ['overview','diagnostics'].indexOf(page)<0)) result.push(E('p', { 'class': 'alert-message warning' }, _('Recovery service unavailable. Configuration changes are blocked.')));
-	if(!data.active || data.active.kind!=='repair' || page==='nodes' || page==='history')result.push(transaction(data, refresh, writable,page));
+	if(!data.active || data.active.kind!=='repair' || page==='nodes' || page==='history')result.push(transaction(data, refresh, writable));
 	if (data.controller_recovery && ['overview','nodes'].indexOf(page)>=0) {
 		var recovery=data.controller_recovery, completed=recovery.status==='committed' && recovery.health_confirmed===true && !(recovery.conflicts || []).length;
 		var finished=terminal(recovery.status);
@@ -437,7 +426,7 @@ function content(page, data, refresh, writable) {
 				h.version,E('code', {title:h.id}, [h.id]),
 				widgets.failure(conflicts ? 'rollback_conflict: ' + conflicts : h.failure, 'local:' + h.id) || (h.kind === 'overrides' ? _('Local settings') : '-')];
 		}, _('No local changes yet'), {writable:writable, refresh:refresh}));
-		if (data.active && data.active.status === 'rollback_conflict') result.push(widgets.section(_('Recovery conflict'), [table([_('Setting'), _('Details')], data.active.conflicts.map(function(c) { return [c.path, c.message]; }))]));
+		if (data.active && data.active.status === 'rollback_conflict') result.push(widgets.section(_('Recovery conflict'), [table([_('Setting'), _('Details')], data.active.conflicts.map(function(c) { return [c.path, c.message || _('External change preserved; manual recovery required')]; }))]));
 	}
 	if (page === 'diagnostics') {
 		var identity = data.cluster && data.cluster.identity;

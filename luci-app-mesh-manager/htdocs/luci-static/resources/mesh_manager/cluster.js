@@ -589,8 +589,11 @@ function summary(page,data,c,refresh,writable) {
 			});
 		},!writable || !c.signing_epoch)
 	]));
+	if(page==='nodes' || page==='history'){
+		var stop=lifecycle.stopStatus(data,refresh,writable);
+		if(stop)result.push(stop);
+	}
 	if(page==='nodes'){
-		var stop=lifecycle.stopStatus(data,refresh,writable);if(stop)result.push(stop);
 		if(id.role==='ap' && data.configured)result.push(widgets.section(_('This device'),[table([_('Node'),_('Status'),_('Mesh'),_('Actions')],[
 			[id.name || _('This device'),widgets.status(_('Online'),'good'),lifecycle.state(data),lifecycle.localAction(data,refresh,writable)]
 		])]));
@@ -731,17 +734,6 @@ function summary(page,data,c,refresh,writable) {
 		var nodeTable=table([_('Node'),_('Status'),_('Backhaul'),_('Version'),_('Configuration'),_('Actions')],nodes,_('No AP nodes joined'));
 		if(nodes.length)nodeTable.querySelector('table').classList.add('mm-node-list');
 		result.push(widgets.section(_('Nodes'),[nodeTable]));
-		var revoked=(c.revocations || []).concat((c.members || []).filter(function(n){return n.authorized===false;}).map(function(n){
-			return {id:n.id,name:n.name,restoration_confirmed:n.restoration_confirmed,removed:n.removed};
-		}));
-		if(revoked.length)result.push(E('details',{'class':'mm-revoked','data-mm-detail':'revoked'},[
-			E('summary',{},[_('Revocation records (%s)').format(revoked.length)]),
-			table([_('Node'),_('Revoked at'),_('Configuration restoration')],revoked.map(function(n){return [
-				E('span',{title:n.id},[n.name || n.id]),n.removed ? new Date(n.removed*1000).toLocaleString() : _('Unavailable'),
-				widgets.status(n.restoration_confirmed ? _('Verified') : _('Needs verification'),n.restoration_confirmed ? 'neutral' : 'warning')
-			];}))
-		]));
-
 	}
 	if(page==='history' && id.role==='root') result.push(history.section('cluster-history', 'cluster', _('Cluster changes'), [
 		_('Time'), _('Status'), _('Mesh intent version'), _('Transaction'), _('Details')
