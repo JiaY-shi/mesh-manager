@@ -14,7 +14,6 @@ export function job_token(value) {
 export function job_arguments(method, args) {
 	if (type(args) != 'object') return false;
 	if (method == 'repair_preview') return !length(keys(args));
-	if (method == 'diagnostic_packages') return !length(keys(args));
 	if (method == 'diagnostic_run') return length(keys(args))==2 && index(['node_ping','node_trace','local_dns','local_address_conflict','local_radios','local_regulatory','local_upstream_dns'],args.check)>=0 && job_token(args.node_id);
 	return method == 'local_overrides_preview' && length(keys(args)) == 1 &&
 		type(args.local) == 'object' && length(sprintf('%J', args.local)) <= 8192;
@@ -118,7 +117,7 @@ export function job_queue(io) {
 		let digest = io.digest(sprintf('%J',canonical({method,args}))),
 			existing = filter(jobs,j=>j.sid == sid && j.request_id == request_id)[0];
 		if (existing) return existing.digest == digest ? public_job(existing) : error('request_conflict');
-		if (index(['diagnostic_run','diagnostic_packages'],method)>=0 && io.now()<next_probe) return error('rate_limited');
+		if (method=='diagnostic_run' && io.now()<next_probe) return error('rate_limited');
 		if (length(filter(jobs,j=>j.sid == sid && j.finished == null)) >= 2) return error('busy');
 		if (length(jobs) >= capacity) {
 			let oldest = filter(jobs,j=>j.finished != null)[0];
@@ -127,7 +126,7 @@ export function job_queue(io) {
 		}
 		let j = {id:io.random(),sid,method,args,request_id,digest,status:'queued',revision:1,deadline:io.now()+30000};
 		push(jobs,j);
-		if (index(['diagnostic_run','diagnostic_packages'],method)>=0) next_probe=io.now()+5000;
+		if (method=='diagnostic_run') next_probe=io.now()+5000;
 		// Start on the next event-loop turn so admission never waits for worker work.
 		io.arm(1);
 		return public_job(j);

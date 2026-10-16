@@ -89,6 +89,10 @@
 .mm-page .mm-mode { display: inline-flex; flex-wrap: wrap; gap: 0; margin: 0 0 8px; border-bottom: 1px solid var(--mm-border); }
 .mm-page .mm-mode .mm-mode-button { border: 0; border-bottom: 2px solid transparent; border-radius: 0; background: transparent; color: var(--mm-muted); box-shadow: none; padding: 5px 12px; }
 .mm-page .mm-mode .mm-mode-active { color: var(--primary-color-medium, #1769aa); border-bottom-color: currentColor; font-weight: 600; }
+.mm-page .mm-diagnostic-navigation { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 6px 12px; margin-bottom: 4px; }
+.mm-page .mm-diagnostic-tabs { margin: 0; min-width: 0; }
+.mm-page .mm-diagnostic-tabs .mm-mode-button { white-space: nowrap; }
+.mm-page .mm-diagnostic-panel { min-width: 0; }
 :is(.mm-page, .mm-dialog) [hidden] { display: none !important; }
 .mm-page .mm-enrollment-panel > .cbi-button { margin-top: 10px; }
 .mm-page .mm-discovery-list { min-height: 28px; }

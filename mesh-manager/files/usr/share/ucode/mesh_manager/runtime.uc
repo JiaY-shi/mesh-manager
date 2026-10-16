@@ -22,7 +22,6 @@ import { steering_service_action } from './roaming.uc';
 import { lan_service_health, lan_service_diagnostics } from './service_health.uc';
 import { service_desired } from './service_runtime.uc';
 import { observed_background } from './service_policy.uc';
-import { note_state } from './event_log.uc';
 import { software_status } from './software_status.uc';
 import { cached_wireless_features } from './capability_features.uc';
 import { wireless_link_compatibility } from './wireless_compatibility.uc';
@@ -41,11 +40,12 @@ const BACKHAUL_STATUS = '/var/run/mesh-manager-backhaul.json';
 const SAVEDIR = '/var/run/mesh-manager-uci';
 const APPROVAL_KEY = '/var/run/mesh-manager-approval.key';
 const read_json = json_reader();
+const DIAGNOSTIC_VIEWS = ['diagnostics_status','diagnostics_network','diagnostics_wireless','diagnostics_system'];
 
 export function status_view(view) {
 	if (view == null || view == '') return 'full';
 	if (type(view) != 'string' || index(['overview', 'nodes', 'wireless', 'backhaul',
-		'clients', 'clients_brief', 'history', 'diagnostics', 'agent', 'full'], view) < 0)
+		'clients', 'clients_brief', 'history', 'diagnostics', ...DIAGNOSTIC_VIEWS, 'agent', 'full'], view) < 0)
 		die('invalid_view: Unknown Mesh Manager status view');
 	return view;
 }
@@ -167,7 +167,11 @@ function wireless_features(cached) {
 	return { hostapd, mesh_control, sae:hostapd && sae==0, ft:hostapd && ft==0, mesh:wpa && mesh==0,
 		control_status, probe_errors, state:length(probe_errors)?'unavailable':'ready' };
 }
-export function capabilities(snapshot, cached, intent) {
+export function capabilities(snapshot, cached, intent, view) {
+	let diagnostic = index(DIAGNOSTIC_VIEWS, view) >= 0;
+	if (diagnostic && view != 'diagnostics_status') return {
+		daemon: recovery_available(), daemon_on_demand: fs.access('/etc/init.d/mesh-manager')
+	};
 	let identity_path = '/etc/mesh-manager/identity.json', identity_stat = fs.lstat(identity_path), controller_identity = null;
 	if (identity_stat) {
 		if (identity_stat.type != 'file' || identity_stat.uid != 0 || identity_stat.mode & 0077 || identity_stat.size > 1024 * 1024)
@@ -212,7 +216,7 @@ export function capabilities(snapshot, cached, intent) {
 		pending_changes: pending,
 		daemon: false,
 		bus: b != null,
-		radios: radio_modes(map(
+		radios: diagnostic ? [] : radio_modes(map(
 			filter(keys(snapshot.wireless), (k) => snapshot.wireless[k].type == 'wifi-device'),
 			(k) => ({
 				name: k,
@@ -241,6 +245,10 @@ export function capabilities(snapshot, cached, intent) {
 	if (!cached && intent?.wifi?.planning?.enabled === true)
 		result.planning = require('mesh_manager.radio_planning_worker').observe(snapshot, b);
 	b?.disconnect();
+	if (diagnostic) return { bus: result.bus, dnsmasq: result.dnsmasq, firewall: result.firewall,
+		hostapd: result.hostapd, sae: result.sae, daemon: result.daemon, daemon_on_demand: result.daemon_on_demand,
+		background: result.background, background_instances: result.background_instances,
+		background_actual_instances: result.background_actual_instances };
 	return result;
 }
 function load(cached) {
@@ -266,7 +274,6 @@ function save(state) {
 	if (length(content) > 1024 * 1024) die('storage_error: Journal size limit exceeded');
 	let result = run(['/usr/libexec/mesh-manager-store'], content, 5000);
 	if (result?.code != 0) die('storage_error: Durable state write failed');
-	note_state('state.json',state);
 }
 function write(ops) {
 	for (let config in CONFIGS) {
@@ -526,9 +533,9 @@ export function observe_clients(intent) {
 function observe(snapshot, view, intent) {
 	let full = !view || view == 'full',
 		clients_needed = full || view == 'clients' || view == 'agent',
-		dfs_needed = full || view == 'diagnostics';
+		dfs_needed = full || view == 'diagnostics' || view == 'diagnostics_wireless';
 	let b = bus();
-	let board = full || index(['overview', 'nodes', 'clients', 'wireless', 'backhaul', 'agent', 'diagnostics'], view) >= 0
+	let board = full || index(['overview', 'nodes', 'clients', 'wireless', 'backhaul', 'agent', 'diagnostics', 'diagnostics_system'], view) >= 0
 		? call(b, 'system', 'board') : null;
 	let lan = full || index(['overview', 'nodes', 'agent'], view) >= 0
 		? call(b, 'network.interface.lan', 'status') : null;
@@ -551,6 +558,16 @@ function observe(snapshot, view, intent) {
 				cac_seconds_left: type(ap_status.dfs?.cac_seconds_left) == 'int' ?
 					ap_status.dfs.cac_seconds_left : null
 			});
+	}
+	// Subtabs sample only their own local observations. Keep the legacy complete
+	// diagnostics view for the explicit redacted export and older callers.
+	if (index(DIAGNOSTIC_VIEWS, view) >= 0 && view != 'diagnostics_status') {
+		b?.disconnect();
+		return { bus_available: b != null,
+			...(view == 'diagnostics_wireless' ? { dfs } : {}),
+			...(view == 'diagnostics_system' ? { software: software_status({
+				...(type(board?.release) == 'object' ? board.release : {}), kernel: board?.kernel
+			}) } : {}) };
 	}
 	let bridge = filter(
 		keys(snapshot.network),
@@ -601,7 +618,7 @@ function observe(snapshot, view, intent) {
 	};
 	if (full) result.links = links;
 	if (dfs_needed) result.dfs = dfs;
-	if (view == 'diagnostics') result.lan_services = lan_service_diagnostics(snapshot,
+	if (view == 'diagnostics' || view == 'diagnostics_status') result.lan_services = lan_service_diagnostics(snapshot,
 		name => call(b, 'service', 'list', {name}), time());
 	if (clients_needed) {
 		result.wireless_available = wireless != null;
@@ -745,7 +762,6 @@ export function first_handoff_stage(intent, request_id, takeover, approval, fram
 		let stamped = handoff_stamp(current.scope, current.journal, sprintf('%J', state), current.snapshot,
 			proof.request, proof.reply, intent, time());
 		write_cas('state.json', current.journal, stamped, min(5000, frame.deadline - current.now));
-		note_state('state.json', json(stamped));
 		let actual = capture();
 		if (type(actual.now) != 'int' || actual.journal !== stamped || !equal(actual.scope, frame.scope) ||
 			actual.snapshot !== frame.snapshot || actual.boot !== frame.boot ||
@@ -845,9 +861,11 @@ export function dispatch(method, args) {
 	if (index(['status', 'diagnostics'], method) >= 0) {
 		let view = method == 'diagnostics' ? 'diagnostics' : status_view(args?.view),
 			frame = frozen_status({ read_locked, load:()=>load(true), snapshot, boot, now }, view), result = frame.data;
-		result.capabilities = capabilities(frame.snapshot, true);
+		result.capabilities = capabilities(frame.snapshot, true, null, view);
 		result.health = frame.active ? health(frame.active) : null;
 		result.local = observe(frame.snapshot, view);
+		if (index(DIAGNOSTIC_VIEWS, view) >= 0) result.intent = view == 'diagnostics_status' && result.intent
+			? { backhaul: { mode: result.intent.backhaul?.mode } } : null;
 		if (index(['wireless','diagnostics'],view)>=0) {
 			let b=bus();
 			result.local.roaming=steering_observation(frame.snapshot,result.intent,result.steering_managed,b);

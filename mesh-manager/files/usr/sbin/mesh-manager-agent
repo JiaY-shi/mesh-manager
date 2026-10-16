@@ -4,7 +4,6 @@
 import * as uloop from 'uloop';
 import { collection_start } from 'mesh_manager.collection';
 import { agent_runner } from 'mesh_manager.agent_schedule';
-import { note } from 'mesh_manager.event_log';
 import { boot, now, load } from 'mesh_manager.durable';
 import { publish_observation } from 'mesh_manager.runtime';
 
@@ -30,9 +29,7 @@ function tick() {
 		});
 	} catch(e) {
 		// A failed temporary status publication must not stop the next agent tick.
-		note('agent','storage_error',null);
 	}
-	if(result.error!='busy')note('agent',result.ok ? 'ok' : result.error,null);
 	timer.set(3000);
 }
 

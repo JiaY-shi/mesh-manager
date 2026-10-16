@@ -192,9 +192,6 @@ msgstr "控制器地址"
 msgid "Controller gateway role"
 msgstr "主节点网关角色"
 
-msgid "Controller identity"
-msgstr "控制器身份"
-
 msgid "Coordinated controller address migration is not implemented; preserve the existing static LAN address"
 msgstr "尚未实现控制器地址迁移协调，请保留现有静态 LAN 地址。"
 
@@ -290,9 +287,6 @@ msgstr "我确认接管界面中列出的配置"
 
 msgid "IPv4 address"
 msgstr "IPv4 地址"
-
-msgid "Identity"
-msgstr "身份"
 
 msgid "Independent SAE passphrase"
 msgstr "独立 SAE 回程密码"
@@ -465,9 +459,6 @@ msgstr "通过"
 msgid "Passphrase"
 msgstr "密码"
 
-msgid "Pending authorization"
-msgstr "等待授权"
-
 msgid "Physical port connected to the upstream LAN. Taking over a WAN port disables its local routing and bridges it into the AP LAN."
 msgstr "连接上级 LAN 的物理端口。接管 WAN 端口后，会禁用其本机路由功能并将其桥接到 AP 的 LAN。"
 
@@ -494,9 +485,6 @@ msgstr "就绪"
 
 msgid "Recovery conflict"
 msgstr "恢复冲突"
-
-msgid "Recovery service"
-msgstr "恢复服务"
 
 msgid "Recovery service unavailable. Configuration changes are blocked."
 msgstr "恢复服务不可用，已阻止配置变更。"
@@ -671,9 +659,6 @@ msgstr "Mesh 网络"
 
 msgid "Identity details"
 msgstr "身份详情"
-
-msgid "Network identity"
-msgstr "网络身份"
 
 msgid "Offline"
 msgstr "离线"
@@ -999,9 +984,6 @@ msgstr "全网配置已更新，请重置后再编辑。"
 msgid "Backhaul changes require every AP to have a verified wired connection. Applying may briefly interrupt the network."
 msgstr "修改回程需要所有 AP 通过已验证的有线路径连接。应用时网络可能短暂中断，请确认接线后再批准。"
 
-msgid "Device identities"
-msgstr "设备身份详情"
-
 msgid "Pagination"
 msgstr "分页"
 
@@ -1073,9 +1055,6 @@ msgstr "配置说明"
 
 msgid "Retrying in 30 seconds"
 msgstr "30 秒后重试"
-
-msgid "Waiting for enrollment credentials or a wired enrollment window"
-msgstr "等待邀请码或 Root 开放有线自动接纳"
 
 msgid "Multiple controllers found; select a network"
 msgstr "发现多个主节点，请选择网络"
@@ -1365,48 +1344,6 @@ msgstr "两次切换建议之间的最短间隔。范围为 30 至 600 秒，推
 msgid "Leave disabled to use the recommended policy. Changes apply to all nodes through a reviewed transaction. Association rejection and forced disconnection remain disabled."
 msgstr "默认使用推荐策略，无需调整。修改经过预览确认后同步到所有节点；不拒绝终端接入，也不强制断开终端。"
 
-msgid "Healthy"
-msgstr "正常"
-
-msgid "Idle"
-msgstr "空闲"
-
-msgid "Node agent"
-msgstr "节点代理"
-
-msgid "Component"
-msgstr "组件"
-
-msgid "Error"
-msgstr "错误"
-
-msgid "No runtime records"
-msgstr "暂无运行记录"
-
-msgid "Clear runtime records"
-msgstr "清理运行记录"
-
-msgid "Cleared %s runtime records."
-msgstr "已清理 %s 条运行记录。"
-
-msgid "Runtime logs changed. Close this dialog and refresh before clearing."
-msgstr "运行记录已变化，请关闭此窗口，刷新后重新确认清理。"
-
-msgid "Clear %s temporary runtime records? Transaction history, recovery snapshots and system logs are preserved."
-msgstr "确认清理这 %s 条临时运行记录？事务历史、恢复快照和系统日志均保留。"
-
-msgid "Refresh records"
-msgstr "刷新记录"
-
-msgid "View runtime records"
-msgstr "查看运行记录"
-
-msgid "Runtime records"
-msgstr "运行记录"
-
-msgid "Up to 128 state changes are kept in memory and disappear after a reboot. These diagnostic records do not replace transaction history."
-msgstr "最多保留 128 条状态变化，仅存于内存，重启后清空。这些诊断记录不替代事务历史。"
-
 msgid "Operation failed"
 msgstr "操作失败"
 
@@ -1551,8 +1488,8 @@ msgstr "本机设备证书"
 msgid "Network CA"
 msgstr "网络 CA 证书"
 
-msgid "Checks local certificates against the saved identity and device time. This does not check private keys, controller connectivity or remote revocation. Certificate renewal is not yet available."
-msgstr "根据已保存的身份和本机时间检查证书。不检查私钥、主节点连通性或远程撤销状态；证书续签尚未实现。"
+msgid "Checks local certificates against the saved identity and device time. This does not check private keys, controller connectivity or remote revocation."
+msgstr "根据已保存的身份和本机时间检查证书。不检查私钥、主节点连通性或远程撤销状态。"
 
 msgid "Firmware versions"
 msgstr "固件版本"
@@ -1647,9 +1584,6 @@ msgstr "取消检查"
 msgid "Node connectivity"
 msgstr "节点连通性"
 
-msgid "Run a node check"
-msgstr "检查节点连接"
-
 msgid "Sends three ICMP packets to the selected managed node, for at most five seconds. ICMP can be blocked by a firewall; this does not verify device identity, service health or roaming."
 msgstr "向所选受管节点发送 3 个 ICMP 包，最长等待 5 秒。防火墙可能阻止 ICMP；此检查不能验证设备身份、服务健康或漫游效果。"
 
@@ -1710,33 +1644,6 @@ msgstr "查看节点路径"
 msgid "Path tracing sends one UDP probe per hop, up to five hops with a one-second wait each. Missing replies can result from filtering and do not prove a node is offline."
 msgstr "路径检查每跳发送 1 个 UDP 探测包，最多 5 跳，每跳等待 1 秒。防火墙过滤可能导致没有回复，并不代表节点离线。"
 
-msgid "Reading installed package versions…"
-msgstr "正在读取已安装的软件包版本…"
-
-msgid "Installed package"
-msgstr "已安装软件包"
-
-msgid "Not installed"
-msgstr "未安装"
-
-msgid "Package versions unavailable"
-msgstr "软件包版本不可用"
-
-msgid "Installed package versions could not be read. No repository or package was changed."
-msgstr "无法读取已安装的软件包版本，软件源和软件包未被修改。"
-
-msgid "Refresh package versions"
-msgstr "刷新软件包版本"
-
-msgid "View installed dependencies"
-msgstr "查看已安装依赖"
-
-msgid "Reads local installed package versions only when opened or refreshed. Packages are not downloaded or changed. Version labels do not prove driver support or service health."
-msgstr "仅在展开或手动刷新时读取本机已安装的软件包版本，不下载或修改软件包。版本信息不能代替驱动能力和服务健康检查。"
-
-msgid "Package versions"
-msgstr "软件包版本"
-
 msgid "Recovery service is unavailable; configuration changes are blocked."
 msgstr "恢复服务不可用，已阻止配置变更。"
 
@@ -1748,9 +1655,6 @@ msgstr "近期未收到该节点的认证上报，请检查电源和连接。"
 
 msgid "The node agent has not reported a fresh status."
 msgstr "节点代理未及时更新状态，请查看运行记录。"
-
-msgid "The node agent check failed. Inspect the current runtime records."
-msgstr "节点代理检查失败，请查看当前运行记录。"
 
 msgid "No active backhaul path was reported."
 msgstr "节点报告当前没有活动回程路径。"
@@ -2735,3 +2639,25 @@ msgstr "SAE 密钥轮换"
 
 msgid "Generate a new wireless backhaul key, then Save & Apply to review and approve the change. All APs require a verified wired connection."
 msgstr "生成新的无线回程密钥，再保存并应用以预览和批准变更。所有 AP 均需已验证的有线连接。"
+
+msgid "Runtime status"
+msgstr "运行状态"
+
+msgid "Network checks"
+msgstr "网络检测"
+
+msgid "Wireless diagnostics"
+msgstr "无线诊断"
+
+msgid "System information"
+msgstr "系统信息"
+
+msgid "Diagnostic categories"
+msgstr "诊断分类"
+
+msgid "Loading…"
+msgstr "正在加载…"
+
+
+msgid "The node agent check failed. Inspect the system logs."
+msgstr "节点代理检查失败，请查看系统日志。"

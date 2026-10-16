@@ -10,8 +10,6 @@
         ],
         "mesh-manager.diag": [
           "export",
-          "logs",
-          "packages",
           "job_get",
           "job_cancel"
         ],
@@ -36,7 +34,6 @@
     "write": {
       "ubus": {
         "mesh-manager.diag": [
-          "clear_logs",
           "run",
           "job_get",
           "job_cancel"

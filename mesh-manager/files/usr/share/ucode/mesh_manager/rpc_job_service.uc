@@ -27,10 +27,10 @@ function service() {
 			function finish(allowed) {
 				if(completed)return;completed=true;pending_authorizations--;done(allowed);
 			}
-			let diagnostic={diagnostic_run:'run',diagnostic_packages:'packages'};
+			let diagnostic=method=='diagnostic_run';
 			try { request=authorization_bus?.defer('session','access',{ubus_rpc_session:sid,
-				scope:'ubus',object:diagnostic[method]?'mesh-manager.diag':'mesh-manager',
-				function:diagnostic[method] || method},(code,result)=>{
+				scope:'ubus',object:diagnostic?'mesh-manager.diag':'mesh-manager',
+				function:diagnostic?'run':method},(code,result)=>{
 				finish(code===0 && result?.access===true);
 			}); } catch(ignored) {}
 			if(!request) finish(false);
@@ -47,8 +47,6 @@ export function job_call(method, request) {
 	if (method=='diagnostic_run' && length(filter(keys(args), key =>
 		index(['check','node_id','request_id','ubus_rpc_session'],key)<0)))
 		return {ok:false,error:{code:'invalid_request',message:'Unknown diagnostic argument'}};
-	if (method=='diagnostic_packages' && length(filter(keys(args),key=>index(['request_id','ubus_rpc_session'],key)<0)))
-		return {ok:false,error:{code:'invalid_request',message:'Unknown package inspection argument'}};
 	// uhttpd supplies this session field after authentication. The Unix-root CLI
 	// can still use existing methods; it cannot guess another browser's job ID.
 	let deferred=request.defer();
@@ -56,7 +54,6 @@ export function job_call(method, request) {
 	if (method == 'repair_preview') service().submit(sid,method,{},args.request_id,reply);
 	if (method == 'local_overrides_preview') service().submit(sid,method,{local:args.local},args.request_id,reply);
 	if (method == 'diagnostic_run') service().submit(sid,method,{check:args.check,node_id:args.node_id},args.request_id,reply);
-	if (method == 'diagnostic_packages') service().submit(sid,method,{},args.request_id,reply);
 	if (method == 'job_get') service().get(sid,args.job_id,reply);
 	if (method == 'job_cancel') service().cancel(sid,args.job_id,reply);
 	return deferred;

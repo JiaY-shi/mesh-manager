@@ -76,13 +76,15 @@ function transactionAction(method, id) {
 	});
 	return operation.promise;
 }
-function loadStatus(view, attempt) {
+function loadStatus(view, attempt, current) {
 	if(view==='advanced')view='nodes';
 	return call('status', view === 'clients' ? 'clients_brief' : view, view === 'history' ? 'paged' : '').catch(function(error) {
+		if(current && !current())throw error;
 		if (attempt >= 12 || (error.code !== 'busy' &&
 			!/another request|request in progress|\bbusy\b/i.test(error.message || ''))) throw error;
 		return new Promise(function(resolve) { window.setTimeout(resolve, Math.min(1000, 200 * (attempt + 1))); }).then(function() {
-			return loadStatus(view, attempt + 1);
+			if(current && !current())throw error;
+			return loadStatus(view, attempt + 1, current);
 		});
 	});
 }
@@ -287,12 +289,151 @@ function wizard(data, refresh, writable) {
 	]);
 }
 
+function diagnosticSections(group,data,writable) {
+	var cap=data.capabilities, result=[], identity=data.cluster && data.cluster.identity;
+	function add(key,section) {
+		if(!section)return;
+		section.dataset.mmDiagnosticSection=key;
+		result.push(section);
+	}
+	if(group==='status') {
+		add('attention',diagnostics.attention(data,true));
+		add('dependencies',widgets.section(_('Dependency checks'), [table([_('Dependency'), _('Status')], [
+			['ubus', cap.bus], ['dnsmasq', cap.dnsmasq], ['firewall4', cap.firewall],
+			['hostapd/wpad', cap.hostapd], ['SAE', cap.sae], [_('Background services'), widgets.background(data)]
+		].map(function(row) {
+			if (typeof row[1] === 'object') return row;
+			return [row[0], widgets.status(row[1] ? _('Available') : _('Unavailable'), row[1] ? 'good' : 'error')];
+		}))]));
+		if (data.local.lan_services) {
+			var services = data.local.lan_services;
+			var serviceNames = {lan_dhcp_configuration:_('LAN DHCP configuration'),lan_dhcp_service:_('LAN DHCP service'),lan_ipv6_service:_('LAN IPv6 service')};
+			var serviceStates = {ready:_('Ready'),not_running:_('Not running'),not_required:_('Not required'),invalid_configuration:_('Configuration needs attention'),unavailable:_('Unavailable')};
+			add('lan',widgets.section(_('LAN services'), [table([_('Check'),_('Status')], (services.checks || []).map(function(check) {
+				return [serviceNames[check.name] || _('Unknown'), widgets.status(serviceStates[check.status] || _('Unknown'),
+					check.status === 'ready' ? 'good' : check.status === 'not_required' ? 'neutral' : 'warning')];
+			})), E('p', {'class':'mm-muted'}, [_('Checks local configuration and service processes. An AP with DHCP and IPv6 announcements disabled does not need these servers. This does not test client connectivity.')]),
+				E('span', {'class':'mm-muted'}, [_('Updated at %s').format(services.observed_at ? new Date(services.observed_at * 1000).toLocaleTimeString() : _('Unavailable'))])
+			]));
+		}
+	}
+	if(group==='system') {
+		if (data.local.certificates) {
+			var certificates = data.local.certificates;
+			var certificateStates = {valid:_('Valid'),expiring:_('Expires within 30 days'),expired:_('Expired'),
+				not_yet_valid:_('Not yet valid'),invalid:_('Invalid certificate'),identity_mismatch:_('Certificate identity mismatch'),
+				untrusted:_('Certificate chain not trusted'),clock_invalid:_('Check device time'),missing:_('Certificate missing'),
+				unavailable:_('Unavailable'),not_enrolled:_('Not enrolled')};
+			add('certificates',widgets.section(_('Certificates'), [table([_('Certificate'),_('Status'),_('Expires')],
+				[['device',_('Device certificate')],['ca',_('Network CA')]].map(function(row) {
+					var value = certificates[row[0]] || {};
+					return [row[1],widgets.status(certificateStates[value.status] || _('Unknown'),
+						value.status === 'valid' ? 'good' : value.status === 'not_enrolled' ? 'neutral' : 'warning'),
+						value.expires_at ? new Date(value.expires_at * 1000).toLocaleDateString() : '-'];
+				})), E('p', {'class':'mm-muted'}, [_('Checks local certificates against the saved identity and device time. This does not check private keys, controller connectivity or remote revocation.')])
+			]));
+		}
+
+		var localSoftware = data.local.software || {};
+		var firmwareRows = [{name:_('This device'),software:localSoftware,local:true}];
+		if (identity && identity.role === 'root') (data.cluster.members || []).filter(function(node) {
+			return node.authorized;
+		}).forEach(function(node) {
+			firmwareRows.push({name:node.name || node.id,software:node.report && node.report.software || {},online:node.online});
+		});
+		add('firmware',widgets.section(_('Firmware versions'), [widgets.details(_('Compare node firmware'), [
+			table([_('Node'),_('Firmware'),_('Target platform'),_('Kernel'),_('Status')],firmwareRows.map(function(node) {
+				var software=node.software;
+				var comparable=['distribution','version','revision'].every(function(field) {return software[field] && localSoftware[field];});
+				var differs=comparable && ['distribution','version','revision'].some(function(field) {return software[field] !== localSoftware[field];});
+				var state=node.local ? _('Local observation') : !node.online ? _('Last reported (offline)') :
+					!comparable ? _('Version unavailable') : differs ? _('Different firmware') : _('Same firmware version');
+				return [node.name,E('span',{},[software.version ? (software.distribution || '')+' '+software.version : _('Unavailable'),
+					E('small',{'class':'mm-muted'},[software.revision || '-'])]),software.target || '-',software.kernel || '-',
+					widgets.status(state, !node.local && node.online && differs ? 'warning' : 'neutral')];
+			})),E('p',{'class':'mm-muted'},[_('Different firmware may support different features. Matching versions do not prove compatibility; configuration preflight still checks actual device capabilities. Offline values are the last report.')])
+		]) ]));
+
+	}
+	if(group==='wireless') {
+		add('dfs',widgets.section(_('DFS and channels'), [table([_('Radio'), _('Channel'), _('Status')], (data.local.dfs || []).map(function(radio) {
+			var label = radio.cac_active === true ? _('CAC in progress (%s s)').format(radio.cac_seconds_left == null ? '?' : radio.cac_seconds_left) :
+				radio.cac_active === false ? _('No CAC in progress') : _('Unavailable');
+			return [radio.radio, radio.channel || '-', widgets.status(label, radio.cac_active === true ? 'warning' : 'neutral')];
+		}), _('DFS status unavailable'))]));
+		diagnostics.active(data,writable,'wireless').wireless.forEach(function(section,index) { add('radio-'+index,section); });
+	}
+	if(group==='network')add('connectivity',diagnostics.active(data,writable,'network').connectivity);
+	return result;
+}
+
+function diagnosticTabs(refresh) {
+	var groups=[['status',_('Runtime status')],['network',_('Network checks')],['wireless',_('Wireless diagnostics')],
+		['system',_('System information')]], current='status', panels={}, controls=[];
+	var nav=E('div',{'class':'mm-mode mm-diagnostic-tabs',role:'tablist','aria-label':_('Diagnostic categories')});
+	function select(group,focus) {
+		current=group;
+		controls.forEach(function(control,index) {
+			var selected=groups[index][0]===group;
+			control.classList.toggle('mm-mode-active',selected);
+			control.setAttribute('aria-selected',String(selected));control.tabIndex=selected?0:-1;
+			panels[groups[index][0]].hidden=!selected;
+			if(selected && focus)control.focus();
+		});
+	}
+	groups.forEach(function(group,index) {
+		var id='mm-diagnostic-'+group[0];
+		var control=E('button',{id:id+'-tab',type:'button','class':'cbi-button mm-mode-button',role:'tab',
+			'aria-controls':id,click:function() { if(current!==group[0]) { select(group[0]);refresh(); } },
+			keydown:function(event) {
+				var next=event.key==='Home'?0:event.key==='End'?groups.length-1:
+					event.key==='ArrowRight'?(index+1)%groups.length:event.key==='ArrowLeft'?(index+groups.length-1)%groups.length:null;
+				if(next==null)return;
+				event.preventDefault();select(groups[next][0],true);refresh();
+			}},[group[1]]);
+		controls.push(control);nav.appendChild(control);
+		panels[group[0]]=E('div',{id:id,'class':'mm-diagnostic-panel',role:'tabpanel',tabindex:0,
+			'aria-labelledby':id+'-tab','data-mm-diagnostic-group':group[0]},[E('p',{'class':'mm-muted'},[_('Loading…')])]);
+	});
+	var download=button(_('Download redacted diagnostics'),function() {
+		return call('diagnostics').then(function(report) {
+			var url=URL.createObjectURL(new Blob([JSON.stringify(report,null,2)],{type:'application/json'}));
+			var link=E('a',{href:url,download:'mesh-manager-diagnostics.json'});
+			document.body.appendChild(link);link.click();link.remove();URL.revokeObjectURL(url);
+		}).catch(notify);
+	});
+	var view=E('div',{'class':'mm-diagnostics'},[
+		E('div',{'class':'mm-diagnostic-navigation'},[nav,E('div',{'class':'mm-actions'},[download])])
+	].concat(groups.map(function(group) { return panels[group[0]]; })));
+	view.mmCurrent=function() { return current; };
+	view.mmUpdate=function(group,data,writable) {
+		var panel=panels[group], previous={};
+		Array.from(panel.children).forEach(function(section) { previous[section.dataset.mmDiagnosticSection]=section; });
+		var next=diagnosticSections(group,data,writable).map(function(section) {
+			var old=previous[section.dataset.mmDiagnosticSection];
+			if(old===section)return old;
+			// Keep static disclosure elements and their focused summaries connected.
+			// Stateful diagnostic tools already return the same section on each update.
+			var detail=old && old.querySelector('details'), replacement=section.querySelector('details');
+			if(detail && replacement) {
+				dom.content(detail.querySelector('.mm-details-body'),Array.from(replacement.querySelector('.mm-details-body').childNodes));
+				return old;
+			}
+			if(old)old.replaceWith(section);
+			return section;
+		});
+		Array.from(panel.children).forEach(function(section) { if(next.indexOf(section)<0)section.remove(); });
+		next.forEach(function(section,index) { if(panel.children[index]!==section)panel.insertBefore(section,panel.children[index] || null); });
+	};
+	select(current);return view;
+}
+
 function content(page, data, refresh, writable) {
 	var result = [], cap = data.capabilities;
 	result = result.concat(cluster.summary(page, data, refresh, writable));
 	if(page==='advanced')return result;
-	if(['overview','diagnostics'].indexOf(page)>=0)result.push(diagnostics.attention(data,page==='diagnostics'));
-	if (!widgets.recoveryReady(cap) && (!data.attention || !data.mesh_enabled || ['overview','diagnostics'].indexOf(page)<0)) result.push(E('p', { 'class': 'alert-message warning' }, _('Recovery service unavailable. Configuration changes are blocked.')));
+	if(page==='overview')result.push(diagnostics.attention(data,false));
+	if (!widgets.recoveryReady(cap) && (!data.attention || !data.mesh_enabled || page!=='overview')) result.push(E('p', { 'class': 'alert-message warning' }, _('Recovery service unavailable. Configuration changes are blocked.')));
 	if(!data.active || data.active.kind!=='repair' || page==='nodes' || page==='history')result.push(transaction(data, refresh, writable));
 	if (data.controller_recovery && ['overview','nodes'].indexOf(page)>=0) {
 		var recovery=data.controller_recovery, completed=recovery.status==='committed' && recovery.health_confirmed===true && !(recovery.conflicts || []).length;
@@ -432,91 +573,17 @@ function content(page, data, refresh, writable) {
 		}, _('No local changes yet'), {writable:writable, refresh:refresh}));
 		if (data.active && data.active.status === 'rollback_conflict') result.push(widgets.section(_('Recovery conflict'), [table([_('Setting'), _('Details')], data.active.conflicts.map(function(c) { return [c.path, c.message || _('External change preserved; manual recovery required')]; }))]));
 	}
-	if (page === 'diagnostics') {
-		var identity = data.cluster && data.cluster.identity;
-		var download = button(_('Download redacted diagnostics'), function() {
-			return call('diagnostics').then(function(report) {
-				var url = URL.createObjectURL(new Blob([JSON.stringify(report, null, 2)], { type: 'application/json' }));
-				var a = E('a', { href: url, download: 'mesh-manager-diagnostics.json' }); document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
-			}).catch(notify);
-		});
-		result.push(widgets.section(_('Dependency checks'), [table([_('Dependency'), _('Status')], [
-			['ubus', cap.bus], ['dnsmasq', cap.dnsmasq], ['firewall4', cap.firewall],
-			['hostapd/wpad', cap.hostapd], ['SAE', cap.sae], [_('Background services'), widgets.background(data)]
-		].map(function(row) {
-			if (typeof row[1] === 'object') return row;
-			return [row[0], widgets.status(row[1] ? _('Available') : _('Unavailable'), row[1] ? 'good' : 'error')];
-		}))], [download]));
-		if (data.local.lan_services) {
-			var services = data.local.lan_services;
-			var serviceNames = {lan_dhcp_configuration:_('LAN DHCP configuration'),lan_dhcp_service:_('LAN DHCP service'),lan_ipv6_service:_('LAN IPv6 service')};
-			var serviceStates = {ready:_('Ready'),not_running:_('Not running'),not_required:_('Not required'),invalid_configuration:_('Configuration needs attention'),unavailable:_('Unavailable')};
-			result.push(widgets.section(_('LAN services'), [table([_('Check'),_('Status')], (services.checks || []).map(function(check) {
-				return [serviceNames[check.name] || _('Unknown'), widgets.status(serviceStates[check.status] || _('Unknown'),
-					check.status === 'ready' ? 'good' : check.status === 'not_required' ? 'neutral' : 'warning')];
-			})), E('p', {'class':'mm-muted'}, [_('Checks local configuration and service processes. An AP with DHCP and IPv6 announcements disabled does not need these servers. This does not test client connectivity.')]),
-				E('span', {'class':'mm-muted'}, [_('Updated at %s').format(services.observed_at ? new Date(services.observed_at * 1000).toLocaleTimeString() : _('Unavailable'))])
-			]));
-		}
-		if (data.local.certificates) {
-			var certificates = data.local.certificates;
-			var certificateStates = {valid:_('Valid'),expiring:_('Expires within 30 days'),expired:_('Expired'),
-				not_yet_valid:_('Not yet valid'),invalid:_('Invalid certificate'),identity_mismatch:_('Certificate identity mismatch'),
-				untrusted:_('Certificate chain not trusted'),clock_invalid:_('Check device time'),missing:_('Certificate missing'),
-				unavailable:_('Unavailable'),not_enrolled:_('Not enrolled')};
-			result.push(widgets.section(_('Certificates'), [table([_('Certificate'),_('Status'),_('Expires')],
-				[['device',_('Device certificate')],['ca',_('Network CA')]].map(function(row) {
-					var value = certificates[row[0]] || {};
-					return [row[1],widgets.status(certificateStates[value.status] || _('Unknown'),
-						value.status === 'valid' ? 'good' : value.status === 'not_enrolled' ? 'neutral' : 'warning'),
-						value.expires_at ? new Date(value.expires_at * 1000).toLocaleDateString() : '-'];
-				})), E('p', {'class':'mm-muted'}, [_('Checks local certificates against the saved identity and device time. This does not check private keys, controller connectivity or remote revocation. Certificate renewal is not yet available.')])
-			]));
-		}
-		result.push(widgets.section(_('DFS and channels'), [table([_('Radio'), _('Channel'), _('Status')], (data.local.dfs || []).map(function(radio) {
-			var label = radio.cac_active === true ? _('CAC in progress (%s s)').format(radio.cac_seconds_left == null ? '?' : radio.cac_seconds_left) :
-				radio.cac_active === false ? _('No CAC in progress') : _('Unavailable');
-			return [radio.radio, radio.channel || '-', widgets.status(label, radio.cac_active === true ? 'warning' : 'neutral')];
-		}), _('DFS status unavailable'))]));
-		var localSoftware = data.local.software || {};
-		var firmwareRows = [{name:_('This device'),software:localSoftware,local:true}];
-		if (identity && identity.role === 'root') (data.cluster.members || []).filter(function(node) {
-			return node.authorized;
-		}).forEach(function(node) {
-			firmwareRows.push({name:node.name || node.id,software:node.report && node.report.software || {},online:node.online});
-		});
-		result.push(widgets.section(_('Firmware versions'), [widgets.details(_('Compare node firmware'), [
-			table([_('Node'),_('Firmware'),_('Target platform'),_('Kernel'),_('Status')],firmwareRows.map(function(node) {
-				var software=node.software;
-				var comparable=['distribution','version','revision'].every(function(field) {return software[field] && localSoftware[field];});
-				var differs=comparable && ['distribution','version','revision'].some(function(field) {return software[field] !== localSoftware[field];});
-				var state=node.local ? _('Local observation') : !node.online ? _('Last reported (offline)') :
-					!comparable ? _('Version unavailable') : differs ? _('Different firmware') : _('Same firmware version');
-				return [node.name,E('span',{},[software.version ? (software.distribution || '')+' '+software.version : _('Unavailable'),
-					E('small',{'class':'mm-muted'},[software.revision || '-'])]),software.target || '-',software.kernel || '-',
-					widgets.status(state, !node.local && node.online && differs ? 'warning' : 'neutral')];
-			})),E('p',{'class':'mm-muted'},[_('Different firmware may support different features. Matching versions do not prove compatibility; configuration preflight still checks actual device capabilities. Offline values are the last report.')])
-		]) ]));
-		result.push(diagnostics.active(data,writable));
-		result.push(diagnostics.packages());
-		result.push(diagnostics.logs(writable));
-		if(identity && identity.role!=='unbound')result.push(widgets.section(_('Technical details'), [widgets.details(_('Device identities'), [
-			table([_('Identity'), _('Details')], [
-				[_('Device identity'), E('span', {}, [identity.id || '-'])],
-				[_('Controller identity'), E('span', {}, [identity.controller_id || '-'])],
-				[_('Network identity'), E('span', {}, [identity.network_id || '-'])]
-			])
-		])]));
-	}
+
 	return result;
 }
 
 return baseclass.extend({
 	page: function(page) {
 		return {
-			load: function() { return loadStatus(page, 0); },
+			load: function() { return loadStatus(page==='diagnostics'?'diagnostics_status':page, 0); },
 			render: function(data) {
 				var writable = L.hasViewPermission(), panel = E('div'), error = E('div'), forms = E('div'), formKey = null;
+				var diagnosticView=page==='diagnostics'?diagnosticTabs(refresh):null, pendingStatus={};
 				var title = document.getElementById('mesh-manager-title') || E('h2', { id: 'mesh-manager-title', 'class': 'mm-app-title' }, [_('Mesh Manager')]);
 				var description = document.getElementById('mesh-manager-description') || E('p', { id: 'mesh-manager-description', 'class': 'mm-app-description' }, [_('Built on native OpenWrt components to manage Mesh nodes and Wi-Fi, with 802.11k/v/r client roaming.')]);
 				var tabs = document.querySelector('#tabmenu');
@@ -534,9 +601,10 @@ return baseclass.extend({
 						if(detail.dataset.mmDetail in values)detail.open=values[detail.dataset.mmDetail];
 					});
 				}
-				function renderStatus(next) {
+				function renderStatus(next,group) {
 					var panelDetails=expanded(panel);
 					dom.content(panel, content(page, next, refresh, writable)); restoreExpanded(panel,panelDetails); dom.content(error, []);
+					if(diagnosticView)diagnosticView.mmUpdate(group,next,writable);
 					var identity = next.cluster && next.cluster.identity, key = identity ? identity.role + ':' + (identity.network_id || '') + ':' +
 						(identity.joining && identity.joining.status || '') + ':' + !!next.configured + ':' + !!next.mesh_enabled : 'legacy';
 					if (key !== formKey) {
@@ -550,17 +618,25 @@ return baseclass.extend({
 				}
 				function refresh(resetForms) {
 					if(resetForms===true)formKey=null;
-					return loadStatus(page, 0).then(function(next) { renderStatus(next);return next; }).catch(function(e) {
+					var group=diagnosticView?diagnosticView.mmCurrent():page;
+					if(pendingStatus[group])return pendingStatus[group];
+					pendingStatus[group]=loadStatus(diagnosticView?'diagnostics_'+group:page, 0,
+						diagnosticView?function() { return group===diagnosticView.mmCurrent(); }:null).then(function(next) {
+						if(!diagnosticView || group===diagnosticView.mmCurrent())renderStatus(next,group);
+						return next;
+					}).catch(function(e) {
+						if(diagnosticView && group!==diagnosticView.mmCurrent())return;
 						dom.content(error,E('p',{'class':'alert-message warning'},[_('Status update failed: %s').format(e.message)]));
-					});
+					}).finally(function() { delete pendingStatus[group]; });
+					return pendingStatus[group];
 				}
-				renderStatus(data);
+				renderStatus(data,diagnosticView?'status':null);
 				poll.add(refresh, 3);
 				return E('div', { 'class': 'mm-page', 'data-mm-view': page, 'aria-label': _('Mesh Manager') }, [
-					E('link', { rel: 'stylesheet', href: L.resource('mesh_manager/mesh-manager.css')+'?v=20261015-network-extensions-1' }),
+					E('link', { rel: 'stylesheet', href: L.resource('mesh_manager/mesh-manager.css')+'?v=20261016-diagnostic-tabs-2' }),
 					tabs ? E('span') : title,
 					tabs ? E('span') : description,
-					error, panel, forms
+					error, panel, diagnosticView, forms
 				]);
 			},
 			handleSave: null, handleSaveApply: null, handleReset: null

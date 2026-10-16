@@ -3,7 +3,6 @@
 import * as fs from 'fs';
 import { run } from 'mesh_process';
 import { acquire } from './locking.uc';
-import { note_state } from './event_log.uc';
 
 const FILES = [
 	'state.json',
@@ -79,7 +78,6 @@ export function load(name) {
 }
 export function save(name, state) {
 	write(name, sprintf('%J', state));
-	note_state(name,state);
 }
 export function random(bytes) {
 	let f = fs.open('/dev/urandom', 'r'),

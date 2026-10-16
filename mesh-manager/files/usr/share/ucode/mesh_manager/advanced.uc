@@ -371,6 +371,19 @@ export function frozen_cluster_status(i, view) {
 	let full = view == 'full', frame = status_frame(i,false,full || view=='nodes'), pair = captured_pair(i, frame);
 	// The captured identity and journal stay private while projection and telemetry run without the write lock.
 	let result = pair.status(view), state = pair.state();
+	let identity = frame.identity;
+	result.local_repair = identity?.agent?.repair ? {
+		id: identity.agent.transaction, status: identity.agent.status,
+		transaction_id: identity.agent.transaction_id || null,
+		manual: match(identity.agent.id || '', /^local-repair-/) != null
+	} : null;
+	result.local_mesh = identity?.agent?.mesh ? { transaction_id: identity.agent.transaction_id || null,
+		manual: match(identity.agent.id || '', /^local-mesh-/) != null } : null;
+	if (index(view, 'diagnostics_') == 0) return {
+		identity: result.identity, version: result.version, members: result.members,
+		local_repair: result.local_repair, local_mesh: result.local_mesh,
+		...(view == 'diagnostics_status' ? { agent: i.agent_status() } : {})
+	};
 	if (full || index(['nodes', 'backhaul'], view) >= 0)
 		for (let member in result.members) {
 			let persisted = state?.members?.[member.id];
@@ -388,18 +401,10 @@ export function frozen_cluster_status(i, view) {
 		result.metadata_history = map(state?.metadata_history || [],row=>({id:row.id,node_id:row.node_id,
 			previous_name:row.previous_name,name:row.name,version:row.version,status:row.status,timestamp:row.timestamp}));
 	}
-	let identity = frame.identity;
 	result.ca_rotation=identity?.role=='root' ? public_ca(state) : identity?.ca_rotation ? {...identity.ca_rotation,phase:'pending'} : null;
 	result.ca_fingerprint=frame.ca_fingerprint;
 	result.signing_epoch=identity?.role=='root' ? state?.config_signing?.epoch || 0 : identity?.signing?.epoch || 0;
 	result.migration=identity?.role=='root' ? public_migration(state?.migration,full ? null : false) : public_migration(identity?.migration,false);
-	result.local_repair = identity?.agent?.repair ? {
-		id: identity.agent.transaction, status: identity.agent.status,
-		transaction_id: identity.agent.transaction_id || null,
-		manual: match(identity.agent.id || '', /^local-repair-/) != null
-	} : null;
-	result.local_mesh = identity?.agent?.mesh ? { transaction_id: identity.agent.transaction_id || null,
-		manual: match(identity.agent.id || '', /^local-mesh-/) != null } : null;
 	if (full || view == 'clients') {
 		let observations = i.client_status();
 		for (let member in result.members)

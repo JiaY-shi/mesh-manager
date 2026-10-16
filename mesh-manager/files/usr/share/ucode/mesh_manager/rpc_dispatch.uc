@@ -32,7 +32,7 @@ export function invoke(method, args) {
 			let view = method == 'diagnostics' ? 'diagnostics' : args?.view || 'overview';
 			result = dispatch(method, { view });
 			result.cluster = cluster_status(view);
-			if (index(['overview','diagnostics'],view)>=0) {
+			if (index(['overview','diagnostics','diagnostics_status'],view)>=0) {
 				result.attention=current_attention(result,boot(),now(),time());
 				for(let member in result.cluster.members)delete member.attention;
 			}
@@ -41,7 +41,7 @@ export function invoke(method, args) {
 				result.cluster.member_counts={total:length(members),online:length(filter(members,m=>m.online===true))};
 				delete result.cluster.members;
 			}
-			if (view == 'diagnostics') result.local.certificates = certificate_diagnostics(durable, time());
+			if (view == 'diagnostics' || view == 'diagnostics_system') result.local.certificates = certificate_diagnostics(durable, time());
 			if (args?.history_mode) {
 				if (view != 'history' || args.history_mode != 'paged') die('invalid_request: Invalid history status mode');
 				result.history_counts = { local: length(result.history || []), cluster: length(result.cluster.history || []),

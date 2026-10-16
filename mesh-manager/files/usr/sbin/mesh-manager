@@ -5,7 +5,6 @@ import * as uloop from 'uloop';
 import { collection_start } from 'mesh_manager.collection';
 import { locked, heartbeat, recovery_pending } from 'mesh_manager.runtime';
 import { onboard_status, onboard_pending } from 'mesh_manager.onboarding';
-import { note } from 'mesh_manager.event_log';
 import { start } from 'mesh_process';
 import { controller_loss_tick } from 'mesh_manager.controller_loss_runtime';
 import { feature_controller, feature_now, feature_boot, feature_signature, feature_cache_frame, publish_feature_cache } from 'mesh_manager.capability_features';
@@ -33,7 +32,7 @@ function tick() {
 		let pending=recovery_pending() || onboard_pending();
 		if (pending) { wireless.tick(true); locked(service => { onboard_status(); service.tick(); }); }
 		controller_loss_tick();
-		heartbeat(); note('recovery','ok',null);
+		heartbeat();
 		reconcile_services();
 		wireless.tick(pending);
 	}
@@ -45,7 +44,6 @@ function tick() {
 		if (code != 'busy') {
 			if (index(['clock_error', 'storage_error', 'corrupt_state', 'configuration_error',
 				'ownership_conflict', 'write_error', 'reload_error', 'entropy_error'], code) < 0) code = 'internal_error';
-			note('recovery',code,null);
 			warn('mesh-manager: recovery check failed (' + code + '); inspect journal and configuration\n');
 		}
 	}

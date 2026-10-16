@@ -5,7 +5,6 @@ import { deferred_preview, deferred_settings } from 'mesh_manager.rpc_async';
 import { job_call } from 'mesh_manager.rpc_job_service';
 import { history_call, history_clear_call } from 'mesh_manager.history_service';
 import { client_call } from 'mesh_manager.client_service';
-import { log_call } from 'mesh_manager.diagnostic_service';
 import { topology_call } from 'mesh_manager.topology_service';
 function call(method, request) { return invoke(method, request?.args || {}); }
 let methods = {};
@@ -95,12 +94,9 @@ return { 'mesh-manager': methods, 'mesh-manager.topology': {
 	detail:{args:{node_id:'',fields:[],if_revision:''},call:request=>topology_call('detail',request)}
 }, 'mesh-manager.diag': {
 	export:{call:handler('diagnostics')},
-	packages:{args:{request_id:''},call:request=>job_call('diagnostic_packages',request)},
 	run:{args:{check:'',node_id:'',request_id:''},call:request=>job_call('diagnostic_run',request)},
 	job_get:{args:{job_id:''},call:request=>job_call('job_get',request)},
-	job_cancel:{args:{job_id:''},call:request=>job_call('job_cancel',request)},
-	logs:{args:{cursor:'',limit:0,fields:[],if_revision:''},call:request=>log_call('logs',request)},
-	clear_logs:{args:{expected_revision:'',request_id:''},call:request=>log_call('clear_logs',request)} },
+	job_cancel:{args:{job_id:''},call:request=>job_call('job_cancel',request)} },
 	'mesh-manager.roaming': { status:{call:handler('roaming_status')},
 		clients:{args:{node_id:'',cursor:'',limit:0,fields:[],if_revision:''},call:request=>client_call('clients',request)},
 		history:{args:{node_id:'',cursor:'',limit:0,fields:[],if_revision:''},call:request=>client_call('history',request)} }, 'mesh-manager.sync': {

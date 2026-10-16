@@ -1,83 +1,23 @@
 // SPDX-License-Identifier: GPL-2.0-only
 'use strict';
 'require baseclass';
-'require rpc';
-'require ui';
-'require mesh_manager.history as history';
 'require mesh_manager.widgets as widgets';
 'require mesh_manager.slow_rpc as slow';
 
-var fetchLogs=rpc.declare({object:'mesh-manager.diag',method:'logs',params:['cursor','limit','fields','if_revision'],reject:true});
-var clearLogs=rpc.declare({object:'mesh-manager.diag',method:'clear_logs',params:['expected_revision','request_id'],reject:true});
-var section,details,table,refresh,clear,writable=false,pending=false,sending=false;
+var writable=false;
 var probeSection,probeTarget,probeStart,probeTrace,probeDns,probeUpstream,probeAddress,probeLocalId,probeCancel,probeOutput,probeRunning=false,probeControl;
-var packageSection,packageDetails,packageOutput,packageRefresh,packageCancel,packageControl,packageRunning=false,packageLoaded=false;
-var activeSections,radioSection,radioDetails,radioOutput,radioRefresh,radioCancel,radioControl,radioLocalId,radioRunning=false,radioLoaded=false,radioScopeChanged=false;
+var radioSection,radioDetails,radioOutput,radioRefresh,radioCancel,radioControl,radioLocalId,radioRunning=false,radioLoaded=false,radioScopeChanged=false;
 var radioPages=Object.create(null),radioFolds=Object.create(null);
 var regulatorySection,regulatoryDetails,regulatoryOutput,regulatoryRefresh,regulatoryCancel,regulatoryControl,regulatoryLocalId,regulatoryRunning=false,regulatoryLoaded=false,regulatoryScopeChanged=false;
 var regulatoryPages=Object.create(null),regulatoryFolds=Object.create(null);
 function button(label,fn){return E('button',{type:'button','class':'cbi-button cbi-button-neutral',click:fn},[label]);}
-function update(){refresh.disabled=pending || sending;clear.disabled=!writable || pending || sending || !table?.mmCurrent()?.total;}
-function diagnosticBusy(){return probeRunning || packageRunning || radioRunning || regulatoryRunning;}
+function diagnosticBusy(){return probeRunning || radioRunning || regulatoryRunning;}
 function updateChecks(){
 	var busy=diagnosticBusy();
 	if(probeStart){probeStart.disabled=probeTrace.disabled=!writable || busy || !probeTarget.value;
 		probeDns.disabled=probeUpstream.disabled=probeAddress.disabled=!writable || busy || !probeLocalId;probeTarget.disabled=busy;probeCancel.disabled=!probeRunning;}
-	if(packageRefresh){packageRefresh.disabled=busy;packageCancel.disabled=!packageRunning;}
 	if(radioRefresh){radioRefresh.disabled=!writable || busy || !radioLocalId;radioCancel.disabled=!radioRunning || radioControl?.cancelled;}
 	if(regulatoryRefresh){regulatoryRefresh.disabled=!writable || busy || !regulatoryLocalId;regulatoryCancel.disabled=!regulatoryRunning || regulatoryControl?.cancelled;}
-}
-function label(value) {
-	return ({unknown:_('Unknown'),no_change:_('No changed fields'),enabled:_('Enabled'),disabled:_('Disabled'),
-		preparing:_('Preparing'),root_applying:_('Applying'),requesting:_('Pending authorization'),
-		ok:_('Healthy'),idle:_('Idle'),unbound:_('Not enrolled'),root:_('Controller'),ap:_('AP node'),
-		staged:_('Staged'),preflight:_('Preflighting'),ready:_('Ready'),applying:_('Applying'),apply_requested:_('Applying'),
-		awaiting_confirm:_('Awaiting confirmation'),confirming:_('Confirming'),committed:_('Committed'),complete:_('Complete'),
-		partial:_('Partially completed'),failed:_('Failed'),rolling_back:_('Rolling back'),rollback_requested:_('Rolling back'),
-		rolled_back:_('Rolled back'),rollback_conflict:_('Rollback conflict'),expired:_('Expired'),cancelled:_('Cancelled'),unverified:_('Could not verify'),
-		queued:_('Queued'),pending:_('Pending authorization'),rejected:_('Rejected'),approved:_('Approved'),joined:_('Joined'),
-		stopped:_('Stopped'),searching_wired:_('Searching on wired LAN'),searching_wireless:_('Scanning nearby Wi-Fi'),
-		waiting_retry:_('Retrying in 30 seconds'),waiting_authorization:_('Waiting for enrollment credentials or a wired enrollment window'),
-		select_controller:_('Multiple controllers found; select a network'),configuring:_('Applying controller configuration'),
-		configuration_retry:_('Configuration rolled back; retrying after 30 seconds'),
-		configuration_reconnect:_('Configuration rolled back; waiting for the controller connection before retrying'),
-		configuration_blocked:_('Configuration preflight failed; waiting for the issue to be resolved'),
-		recovery_conflict:_('Recovery conflict; inspect node changes before retrying')})[value] || _('Error');
-}
-function renderRow(entry) {
-	var components={local:_('Local changes'),cluster:_('Cluster changes'),identity:_('Device identity'),
-		recovery:_('Recovery service'),agent:_('Node agent'),backhaul:_('Backhaul')};
-	return [new Date(entry.timestamp*1000).toLocaleString(),components[entry.component] || _('Unknown'),
-		E('span',{title:entry.status},[label(entry.status)]),entry.version == null ? '-' : String(entry.version)];
-}
-function load() {
-	if(table)return table.mmReload();
-	table=history.table('runtime-logs','runtime',[_('Time'),_('Component'),_('Status'),_('Version')],renderRow,_('No runtime records'),{
-		maximum:128,fetch:function(group,cursor,limit,fields,revision){return fetchLogs(cursor,limit,fields,revision);},
-		changed:function(page,busy){pending=busy;update();}
-	});
-	details.querySelector('.mm-details-body').appendChild(table);update();
-}
-function confirmClear() {
-	var page=table?.mmCurrent();if(!writable || pending || sending || !page?.total)return;
-	var revision=page.clear_revision,bytes=new Uint8Array(16);window.crypto.getRandomValues(bytes);
-	var request=Array.from(bytes).map(function(value){return value.toString(16).padStart(2,'0');}).join('');
-	var result=E('p',{role:'status'}),confirm=button(_('Clear runtime records'),function(){
-		if(sending)return;sending=true;confirm.disabled=true;cancel.disabled=true;update();
-		clearLogs(revision,request).then(function(reply){
-			if(!reply?.ok)throw Object.assign(new Error(reply?.error?.message || _('Operation failed')),{code:reply?.error?.code});
-			result.textContent=_('Cleared %s runtime records.').format(reply.data.cleared);
-			ui.addNotification(null,E('p',{},[result.textContent]),'info');ui.hideModal();
-			return table.mmReload();
-		}).catch(function(error){
-			result.textContent=error.code==='preview_changed' ? _('Runtime logs changed. Close this dialog and refresh before clearing.') : widgets.configurationError(error);
-		}).finally(function(){sending=false;cancel.disabled=false;update();});
-	});
-	var cancel=button(_('Cancel'),function(){if(!sending)ui.hideModal();});
-	widgets.modal(_('Clear runtime records'),[
-		E('p',{},[_('Clear %s temporary runtime records? Transaction history, recovery snapshots and system logs are preserved.').format(page.total)]),
-		result,E('div',{'class':'mm-actions mm-dialog-actions'},[cancel,confirm])
-	]);
 }
 function probeFailure(error) {
 	return ({rate_limited:_('Wait five seconds before starting another check.'),
@@ -165,25 +105,6 @@ function renderTrace(value) {
 		return [String(hop.hop),hop.address || '-',hop.roundtrip_ms==null?'-':hop.roundtrip_ms.toFixed(3)+' ms',
 			hop.status==='no_reply'?_('No reply'):hop.status==='reply'?_('Reply received'):reasons[hop.reason] || _('Unreachable response')];
 	}),_('No hop observations')));
-}
-function loadPackages() {
-	if(diagnosticBusy())return;
-	packageRunning=true;packageLoaded=true;updateChecks();
-	packageOutput.textContent=_('Queued');
-	packageControl={progress:function(state){packageOutput.textContent=state==='running'?_('Reading installed package versions…'):_('Queued');}};
-	return slow.preview(packageControl,'packages',{},'mesh-manager.diag').then(function(reply){
-		if(!reply || !reply.ok){packageOutput.textContent=packageFailure(reply && reply.error);return;}
-		var value=reply.data;
-		packageOutput.replaceChildren(widgets.pagedTable('installed-packages',[_('Dependency'),_('Installed package'),_('Version')],value.items,function(row){
-			return [row.name,row.packages.length?E('span',{},row.packages.map(function(pkg){return E('div',{},[pkg.name]);})):_('Not installed'),
-				row.packages.length?E('span',{},row.packages.map(function(pkg){return E('div',{},[pkg.version]);})):'-'];
-		},_('Package versions unavailable')),E('p',{'class':'mm-muted'},[_('Updated at %s').format(new Date(value.observed_at*1000).toLocaleTimeString())]));
-	}).catch(function(error){packageOutput.textContent=packageFailure(error);}).finally(function(){
-		packageRunning=false;updateChecks();
-	});
-}
-function packageFailure(error) {
-	return error && error.code==='backend_unavailable'?_('Installed package versions could not be read. No repository or package was changed.'):probeFailure(error);
 }
 function radioState(value){
 	return widgets.status(({complete:_('Complete'),partial:_('Incomplete'),unavailable:_('Unavailable')})[value] || _('Unknown'),value==='complete'?'neutral':'warning');
@@ -393,7 +314,7 @@ return baseclass.extend({attention:function(data,showEmpty){
 	var descriptions={recovery_unavailable:_('Recovery service is unavailable; configuration changes are blocked.'),
 		bus_unavailable:_('Local service status cannot be read.'),node_offline:_('No recent authenticated node report.'),
 		agent_unavailable:_('The node agent has not reported a fresh status.'),
-		agent_check_failed:_('The node agent check failed. Inspect the current runtime records.'),
+		agent_check_failed:_('The node agent check failed. Inspect the system logs.'),
 		backhaul_unavailable:_('No active backhaul path was reported.'),backup_active:_('Wireless backup is active. Check the preferred wired connection.')};
 	var destinations={nodes:_('View node'),backhaul:_('View backhaul'),diagnostics:_('View diagnostics')};
 	return widgets.section(_('Needs attention'),[
@@ -406,21 +327,9 @@ return baseclass.extend({attention:function(data,showEmpty){
 		state.total ? E('p',{'class':'mm-muted'},[_('Current observations only. Alerts disappear after recovery; past failures remain in Changes.')]) : null,
 		state.truncated ? E('p',{'class':'mm-error'},[_('Only the first 128 alerts are shown. Check the Nodes page for the remaining devices.')]) : null
 	]);
-},logs:function(canWrite){
+},active:function(data,canWrite,group){
 	writable=canWrite;
-	if(!section){
-		refresh=button(_('Refresh records'),load);clear=button(_('Clear runtime records'),confirmClear);
-		details=widgets.details(_('View runtime records'),[
-			E('p',{'class':'mm-muted'},[_('Up to 128 state changes are kept in memory and disappear after a reboot. These diagnostic records do not replace transaction history.')]),
-			E('div',{'class':'mm-actions'},[refresh,clear])
-		]);
-		details.addEventListener('toggle',function(){if(details.open && !table)load();});
-		section=widgets.section(_('Runtime records'),[details]);
-	}
-	update();return section;
-},active:function(data,canWrite){
-	writable=canWrite;
-	if(!probeSection){
+	if(group!=='wireless' && !probeSection){
 		probeTarget=E('select',{'class':'cbi-input-select mm-probe-target','aria-label':_('Diagnostic node')});
 		probeStart=button(_('Check connectivity'),function(){return runProbe('node_ping');});
 		probeTrace=button(_('Trace node path'),function(){return runProbe('node_trace');});
@@ -435,11 +344,11 @@ return baseclass.extend({attention:function(data,showEmpty){
 		].forEach(function(row){row[0].setAttribute('data-tooltip',row[1]);row[0].setAttribute('aria-description',row[1]);});
 		probeCancel=button(_('Cancel check'),function(){if(probeControl && probeControl.cancel)probeControl.cancel().catch(function(error){probeOutput.textContent=probeFailure(error);});});
 		probeCancel.disabled=true;probeOutput=E('div',{role:'status','aria-live':'polite','class':'mm-probe-result'});
-		probeSection=widgets.section(_('Node connectivity'),[widgets.details(_('Run a node check'),[
+		probeSection=widgets.section(_('Node connectivity'),[
 			E('div',{'class':'mm-actions'},[probeTarget,probeStart,probeTrace,probeDns,probeUpstream,probeAddress,probeCancel]),probeOutput
-		])]);
+		]);
 	}
-	if(!probeRunning){
+	if(group!=='wireless' && !probeRunning){
 		var identity=data.cluster && data.cluster.identity,targets=[];
 		probeLocalId=identity && identity.id;
 		if(data.mesh_enabled && identity && identity.role==='root')targets=(data.cluster.members || []).filter(function(node){return node.authorized && node.online && !node.mesh_paused;});
@@ -448,19 +357,6 @@ return baseclass.extend({attention:function(data,showEmpty){
 		probeTarget.replaceChildren.apply(probeTarget,targets.length?targets.map(function(node){return E('option',{value:node.id},[node.name || node.id]);}):[E('option',{value:''},[_('No online managed nodes')])]);
 		if(targets.some(function(node){return node.id===selected;}))probeTarget.value=selected;
 	}
-	var radio=radioCapabilities(data),regulatory=regulatoryData(data);updateChecks();
-	if(!activeSections)activeSections=E('div',{},[probeSection,radio,regulatory]);return activeSections;
-},packages:function(){
-	if(!packageSection){
-		packageRefresh=button(_('Refresh package versions'),loadPackages);
-		packageCancel=button(_('Cancel check'),function(){if(packageControl && packageControl.cancel)packageControl.cancel().catch(function(error){packageOutput.textContent=packageFailure(error);});});
-		packageCancel.disabled=true;packageOutput=E('div',{'class':'mm-package-result',role:'status','aria-live':'polite'});
-		packageDetails=widgets.details(_('View installed dependencies'),[
-			E('p',{'class':'mm-muted'},[_('Reads local installed package versions only when opened or refreshed. Packages are not downloaded or changed. Version labels do not prove driver support or service health.')]),
-			E('div',{'class':'mm-actions'},[packageRefresh,packageCancel]),packageOutput
-		]);
-		packageDetails.addEventListener('toggle',function(){if(packageDetails.open && !packageLoaded)loadPackages();});
-		packageSection=widgets.section(_('Package versions'),[packageDetails]);
-	}
-	updateChecks();return packageSection;
+	var wireless=group==='network'?[]:[radioCapabilities(data),regulatoryData(data)];updateChecks();
+	return {connectivity:probeSection,wireless:wireless};
 }});
