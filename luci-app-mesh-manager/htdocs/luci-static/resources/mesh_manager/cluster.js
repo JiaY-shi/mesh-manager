@@ -762,7 +762,6 @@ function summary(page,data,c,refresh,writable) {
 			return [new Date(row.timestamp*1000).toLocaleString(),E('span',{title:row.node_id},[row.previous_name]),row.name,
 				widgets.status(_('Committed'),'good')];
 		},_('No node name changes'),{writable:writable,refresh:refresh}));
-	if(page==='diagnostics' && c.agent && !c.agent.ok) result.push(E('p',{'class':'alert-message warning'},[_('Node agent error')+': '+c.agent.error]));
 	return result;
 }
 return baseclass.extend({

@@ -417,9 +417,6 @@ msgstr "暂无数据"
 msgid "Node"
 msgstr "节点"
 
-msgid "Node agent error"
-msgstr "节点代理异常"
-
 msgid "Node name"
 msgstr "节点名称"
 
