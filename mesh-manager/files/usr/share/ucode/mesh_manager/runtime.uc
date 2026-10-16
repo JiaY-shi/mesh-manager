@@ -40,12 +40,13 @@ const BACKHAUL_STATUS = '/var/run/mesh-manager-backhaul.json';
 const SAVEDIR = '/var/run/mesh-manager-uci';
 const APPROVAL_KEY = '/var/run/mesh-manager-approval.key';
 const read_json = json_reader();
+const ADVANCED_VIEWS = ['advanced_migration','advanced_security'];
 const DIAGNOSTIC_VIEWS = ['diagnostics_status','diagnostics_network','diagnostics_wireless','diagnostics_system'];
 
 export function status_view(view) {
 	if (view == null || view == '') return 'full';
 	if (type(view) != 'string' || index(['overview', 'nodes', 'wireless', 'backhaul',
-		'clients', 'clients_brief', 'history', 'diagnostics', ...DIAGNOSTIC_VIEWS, 'agent', 'full'], view) < 0)
+		'clients', 'clients_brief', 'history', 'diagnostics', ...DIAGNOSTIC_VIEWS, ...ADVANCED_VIEWS, 'agent', 'full'], view) < 0)
 		die('invalid_view: Unknown Mesh Manager status view');
 	return view;
 }
@@ -169,7 +170,7 @@ function wireless_features(cached) {
 }
 export function capabilities(snapshot, cached, intent, view) {
 	let diagnostic = index(DIAGNOSTIC_VIEWS, view) >= 0;
-	if (diagnostic && view != 'diagnostics_status') return {
+	if (index(ADVANCED_VIEWS,view)>=0 || diagnostic && view != 'diagnostics_status') return {
 		daemon: recovery_available(), daemon_on_demand: fs.access('/etc/init.d/mesh-manager')
 	};
 	let identity_path = '/etc/mesh-manager/identity.json', identity_stat = fs.lstat(identity_path), controller_identity = null;
@@ -531,6 +532,7 @@ export function observe_clients(intent) {
 	}
 }
 function observe(snapshot, view, intent) {
+	if(index(ADVANCED_VIEWS,view)>=0)return {};
 	let full = !view || view == 'full',
 		clients_needed = full || view == 'clients' || view == 'agent',
 		dfs_needed = full || view == 'diagnostics' || view == 'diagnostics_wireless';
@@ -864,7 +866,7 @@ export function dispatch(method, args) {
 		result.capabilities = capabilities(frame.snapshot, true, null, view);
 		result.health = frame.active ? health(frame.active) : null;
 		result.local = observe(frame.snapshot, view);
-		if (index(DIAGNOSTIC_VIEWS, view) >= 0) result.intent = view == 'diagnostics_status' && result.intent
+		if (index([...DIAGNOSTIC_VIEWS,...ADVANCED_VIEWS], view) >= 0) result.intent = view == 'diagnostics_status' && result.intent
 			? { backhaul: { mode: result.intent.backhaul?.mode } } : null;
 		if (index(['wireless','diagnostics'],view)>=0) {
 			let b=bus();

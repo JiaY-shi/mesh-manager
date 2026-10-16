@@ -2661,3 +2661,18 @@ msgstr "正在加载…"
 
 msgid "The node agent check failed. Inspect the system logs."
 msgstr "节点代理检查失败，请查看系统日志。"
+
+msgid "Certificates and keys"
+msgstr "证书与密钥"
+
+msgid "Advanced categories"
+msgstr "高级分类"
+
+msgid "Certificates and keys are managed by the current controller."
+msgstr "证书与密钥由当前控制器管理。"
+
+msgid "CA rotation is in progress. Check Certificates and keys before migrating."
+msgstr "CA 正在轮换，请先在“证书与密钥”中查看进度，再迁移控制器。"
+
+msgid "Controller migration is in progress. Manage it on the Controller migration tab."
+msgstr "控制器正在迁移，请在“控制器迁移”标签中管理。"

@@ -368,7 +368,7 @@ function captured_pair(i, frame) {
 }
 export function frozen_cluster_status(i, view) {
 	view = status_view(view);
-	let full = view == 'full', frame = status_frame(i,false,full || view=='nodes'), pair = captured_pair(i, frame);
+	let full = view == 'full', frame = status_frame(i,false,full || view=='nodes' || view=='advanced_security'), pair = captured_pair(i, frame);
 	// The captured identity and journal stay private while projection and telemetry run without the write lock.
 	let result = pair.status(view), state = pair.state();
 	let identity = frame.identity;
@@ -384,6 +384,16 @@ export function frozen_cluster_status(i, view) {
 		local_repair: result.local_repair, local_mesh: result.local_mesh,
 		...(view == 'diagnostics_status' ? { agent: i.agent_status() } : {})
 	};
+	if(index(['advanced_migration','advanced_security'],view)>=0) {
+		let moving=identity?.role=='root'?state?.migration:identity?.migration,
+			rotation=identity?.role=='root'?state?.ca_rotation:identity?.ca_rotation;
+		return {identity:result.identity,version:result.version,members:result.members,
+			local_repair:result.local_repair,local_mesh:result.local_mesh,
+			ca_rotation:rotation?{phase:rotation.phase}:null,
+			migration:view=='advanced_migration'?public_migration(moving,false):moving?{phase:moving.phase}:null,
+			...(view=='advanced_security'?{ca_fingerprint:frame.ca_fingerprint,
+				signing_epoch:identity?.role=='root'?state?.config_signing?.epoch || 0:identity?.signing?.epoch || 0}:{})};
+	}
 	if (full || index(['nodes', 'backhaul'], view) >= 0)
 		for (let member in result.members) {
 			let persisted = state?.members?.[member.id];

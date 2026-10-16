@@ -560,9 +560,12 @@ function clusterNodeList(data,c,a) {
 function summary(page,data,c,refresh,writable) {
 	if(!c)return [];
 	var result=[],id=c.identity || {},a=c.active;
-	if(page==='advanced')result.push(migration.section(data,c,refresh,writable && !caPending(c)));
+	if(page==='advanced_migration')result.push(migration.section(data,c,refresh,writable && !caPending(c)));
+	if(page==='advanced_migration' && caPending(c))result.unshift(E('p',{'class':'alert-message warning'},[_('CA rotation is in progress. Check Certificates and keys before migrating.')]));
+	if(page==='advanced_security' && id.role!=='root')return [widgets.section(_('Certificates and keys'),[E('p',{'class':'mm-muted'},[_('Certificates and keys are managed by the current controller.')])])];
+	if(page==='advanced_security' && migration.pending(c))result.push(E('p',{'class':'alert-message warning'},[_('Controller migration is in progress. Manage it on the Controller migration tab.')]));
 	writable=writable && !migration.pending(c) && !caPending(c);
-	if(page==='advanced' && id.role==='root')result.push(widgets.section(_('Network CA'),[
+	if(page==='advanced_security' && id.role==='root')result.push(widgets.section(_('Network CA'),[
 		E('p',{'class':'mm-muted'},[_('Rotate trust and renew device certificates, then retire the old CA. Offline devices pause completion. Keep all devices connected.')]),
 		c.ca_rotation ? E('p',{},[({trust:_('Distributing CA trust'),renew:_('Renewing certificates'),retire:_('Retiring old CA'),complete:_('CA rotation complete')})[c.ca_rotation.phase] || _('Unavailable')]) : null,
 		button(_('Rotate network CA'),function() {
@@ -571,7 +574,7 @@ function summary(page,data,c,refresh,writable) {
 			});
 		},!writable || !c.ca_fingerprint)
 	]));
-	if(page==='advanced' && id.role==='root')result.push(widgets.section(_('Device certificates'),[
+	if(page==='advanced_security' && id.role==='root')result.push(widgets.section(_('Device certificates'),[
 		E('p',{'class':'mm-muted'},[_('Certificates renew automatically within 30 days of expiry. Each device renews independently when connected.')]),
 		button(_('Renew certificates now'),function() {
 			return call('certificate_renew','').then(function() {
@@ -580,7 +583,7 @@ function summary(page,data,c,refresh,writable) {
 			});
 		},!writable)
 	]));
-	if(page==='advanced' && id.role==='root')result.push(widgets.section(_('Configuration signing key'),[
+	if(page==='advanced_security' && id.role==='root')result.push(widgets.section(_('Configuration signing key'),[
 		E('p',{'class':'mm-muted'},[_('Configuration responses use a separate key. Connected devices learn rotations automatically.')]),
 		E('p',{},[_('Key generation: %s').format(c.signing_epoch || 0)]),
 		button(_('Rotate signing key'),function() {

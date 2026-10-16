@@ -300,7 +300,7 @@ export function pairing_service(io) {
 		let result = {
 			identity: public_identity(settings_identity(identity, io.load('state.json')),io.public_enrollment?.(identity)),
 			version: identity?.role == 'ap' ? identity.cluster_version || 0 : s.version,
-			members: view == 'diagnostics_wireless' ? [] : map(values(s.members), (m) => {
+			members: index(['diagnostics_wireless','advanced_security'],view)>=0 ? [] : map(values(s.members), (m) => {
 				let seen = io.presence?.(m.id) || m;
 				let member = {
 					id: m.id,
@@ -318,6 +318,7 @@ export function pairing_service(io) {
 					member.attention=member_attention(m,member.online,s.intent?.backhaul?.mode);
 				if (full) member.report = m.report;
 				else if (m.report && index(['diagnostics','diagnostics_system'],view)>=0) member.report = { software: m.report.software || null };
+				else if (m.report && view == 'advanced_migration') member.report={backhaul:{active:m.report.backhaul?.active}};
 				else if (m.report && view == 'nodes')
 					member.report = { model: m.report.model, configured: m.report.configured,
 						local_version: m.report.local_version, mesh_enabled: m.report.mesh_enabled,

@@ -26,10 +26,10 @@ function button(text, action, disabled) {
 	function unavailable(){return typeof disabled==='function' ? disabled() : !!disabled;}
 	var b=E('button',{'class':'cbi-button cbi-button-neutral','type':'button',disabled:unavailable()},[text]);
 	b.addEventListener('click',function() {
-		b.disabled=true;
+		b.disabled=true;b.classList.add('spinning');
 		return Promise.resolve().then(action).catch(function(error) {
 			ui.addNotification(null,E('p',{},[error.message]),'error');
-		}).finally(function(){b.disabled=unavailable();});
+		}).finally(function(){b.classList.remove('spinning');b.disabled=unavailable();});
 	});return b;
 }
 function nodeName(c,id) {
@@ -109,6 +109,6 @@ function section(data,c,refresh,writable) {
 				return slow_rpc.action('migration_preflight',{node_id:target.value,request_id:request}).then(unwrap).then(function(){return refresh(true);});
 			},!writable || !target.options.length || !data.mesh_enabled || !!(data.drift || []).length)]));
 	}
-	var section=widgets.section(_('Controller migration'),body);section.classList.add('mm-migration');return section;
+	var section=widgets.section(_('Controller migration'),body);section.classList.add('mm-migration');section.dataset.mmMigrationId=m && m.id || '';return section;
 }
 return baseclass.extend({pending:pending,section:section});

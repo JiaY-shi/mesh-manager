@@ -77,7 +77,6 @@ function transactionAction(method, id) {
 	return operation.promise;
 }
 function loadStatus(view, attempt, current) {
-	if(view==='advanced')view='nodes';
 	return call('status', view === 'clients' ? 'clients_brief' : view, view === 'history' ? 'paged' : '').catch(function(error) {
 		if(current && !current())throw error;
 		if (attempt >= 12 || (error.code !== 'busy' &&
@@ -367,10 +366,11 @@ function diagnosticSections(group,data,writable) {
 	return result;
 }
 
-function diagnosticTabs(refresh) {
-	var groups=[['status',_('Runtime status')],['network',_('Network checks')],['wireless',_('Wireless diagnostics')],
-		['system',_('System information')]], current='status', panels={}, controls=[];
-	var nav=E('div',{'class':'mm-mode mm-diagnostic-tabs',role:'tablist','aria-label':_('Diagnostic categories')});
+function categoryTabs(page,refresh) {
+	var advanced=page==='advanced', prefix=advanced?'advanced':'diagnostic';
+	var groups=advanced?[['migration',_('Controller migration')],['security',_('Certificates and keys')]]:[['status',_('Runtime status')],['network',_('Network checks')],['wireless',_('Wireless diagnostics')],
+		['system',_('System information')]], current=groups[0][0], panels={}, controls=[];
+	var nav=E('div',{'class':'mm-mode mm-category-tabs mm-'+prefix+'-tabs',role:'tablist','aria-label':advanced?_('Advanced categories'):_('Diagnostic categories')});
 	function select(group,focus) {
 		current=group;
 		controls.forEach(function(control,index) {
@@ -382,7 +382,7 @@ function diagnosticTabs(refresh) {
 		});
 	}
 	groups.forEach(function(group,index) {
-		var id='mm-diagnostic-'+group[0];
+		var id='mm-'+prefix+'-'+group[0];
 		var control=E('button',{id:id+'-tab',type:'button','class':'cbi-button mm-mode-button',role:'tab',
 			'aria-controls':id,click:function() { if(current!==group[0]) { select(group[0]);refresh(); } },
 			keydown:function(event) {
@@ -392,26 +392,49 @@ function diagnosticTabs(refresh) {
 				event.preventDefault();select(groups[next][0],true);refresh();
 			}},[group[1]]);
 		controls.push(control);nav.appendChild(control);
-		panels[group[0]]=E('div',{id:id,'class':'mm-diagnostic-panel',role:'tabpanel',tabindex:0,
-			'aria-labelledby':id+'-tab','data-mm-diagnostic-group':group[0]},[E('p',{'class':'mm-muted'},[_('Loading…')])]);
+		panels[group[0]]=E('div',{id:id,'class':'mm-category-panel mm-'+prefix+'-panel',role:'tabpanel',tabindex:0,
+			'aria-labelledby':id+'-tab',['data-mm-'+prefix+'-group']:group[0]},[E('p',{'class':'mm-muted'},[_('Loading…')])]);
 	});
-	var download=button(_('Download redacted diagnostics'),function() {
+	var download=advanced?null:button(_('Download redacted diagnostics'),function() {
 		return call('diagnostics').then(function(report) {
 			var url=URL.createObjectURL(new Blob([JSON.stringify(report,null,2)],{type:'application/json'}));
 			var link=E('a',{href:url,download:'mesh-manager-diagnostics.json'});
 			document.body.appendChild(link);link.click();link.remove();URL.revokeObjectURL(url);
 		}).catch(notify);
 	});
-	var view=E('div',{'class':'mm-diagnostics'},[
-		E('div',{'class':'mm-diagnostic-navigation'},[nav,E('div',{'class':'mm-actions'},[download])])
+	var view=E('div',{'class':advanced?'mm-advanced':'mm-diagnostics'},[
+		E('div',{'class':'mm-category-navigation'},[nav,download?E('div',{'class':'mm-actions'},[download]):null])
 	].concat(groups.map(function(group) { return panels[group[0]]; })));
 	view.mmCurrent=function() { return current; };
 	view.mmUpdate=function(group,data,writable) {
 		var panel=panels[group], previous={};
-		Array.from(panel.children).forEach(function(section) { previous[section.dataset.mmDiagnosticSection]=section; });
-		var next=diagnosticSections(group,data,writable).map(function(section) {
-			var old=previous[section.dataset.mmDiagnosticSection];
+		function key(section) { return section.dataset.mmCategorySection || section.dataset.mmDiagnosticSection; }
+		Array.from(panel.children).forEach(function(section) { previous[key(section)]=section; });
+		var sections=advanced?cluster.summary('advanced_'+group,data,refresh,writable):diagnosticSections(group,data,writable);
+		var next=sections.map(function(section,index) {
+			if(advanced) {
+				section.dataset.mmCategorySection=group+':'+(section.querySelector('h3')?.textContent || 'notice');
+				section.dataset.mmActionRevision=group==='security'?[data.cluster?.ca_fingerprint,data.cluster?.signing_epoch].join(':'):data.cluster?.migration?.id || '';
+			}
+			var old=previous[key(section)];
 			if(old===section)return old;
+			if(advanced && old) {
+				if(old.querySelector('button.spinning'))return old;
+				var focused=document.activeElement, target=section.querySelector('.mm-migration-target'), oldTarget=old.querySelector('.mm-migration-target');
+				if(target && oldTarget && Array.from(target.options).some(function(option) {return option.value===oldTarget.value;}))target.value=oldTarget.value;
+				var focusDetail=null;
+				old.querySelectorAll('details[data-mm-detail]').forEach(function(detail) {
+					var nextDetail=Array.from(section.querySelectorAll('details[data-mm-detail]')).find(function(candidate) {return candidate.dataset.mmDetail===detail.dataset.mmDetail;});
+					if(nextDetail)nextDetail.open=detail.open;
+					if(detail.querySelector('summary')===focused)focusDetail=nextDetail;
+				});
+				// Retain stable controls while the observed state is unchanged.
+				if(old.isEqualNode(section))return old;
+				old.replaceWith(section);
+				if(oldTarget && focused===oldTarget && target)target.focus();
+				else if(focusDetail)focusDetail.querySelector('summary').focus();
+				return section;
+			}
 			// Keep static disclosure elements and their focused summaries connected.
 			// Stateful diagnostic tools already return the same section on each update.
 			var detail=old && old.querySelector('details'), replacement=section.querySelector('details');
@@ -580,10 +603,10 @@ function content(page, data, refresh, writable) {
 return baseclass.extend({
 	page: function(page) {
 		return {
-			load: function() { return loadStatus(page==='diagnostics'?'diagnostics_status':page, 0); },
+			load: function() { return loadStatus(page==='diagnostics'?'diagnostics_status':page==='advanced'?'advanced_migration':page, 0); },
 			render: function(data) {
 				var writable = L.hasViewPermission(), panel = E('div'), error = E('div'), forms = E('div'), formKey = null;
-				var diagnosticView=page==='diagnostics'?diagnosticTabs(refresh):null, pendingStatus={};
+				var categoryView=page==='diagnostics'||page==='advanced'?categoryTabs(page,refresh):null, pendingStatus={};
 				var title = document.getElementById('mesh-manager-title') || E('h2', { id: 'mesh-manager-title', 'class': 'mm-app-title' }, [_('Mesh Manager')]);
 				var description = document.getElementById('mesh-manager-description') || E('p', { id: 'mesh-manager-description', 'class': 'mm-app-description' }, [_('Built on native OpenWrt components to manage Mesh nodes and Wi-Fi, with 802.11k/v/r client roaming.')]);
 				var tabs = document.querySelector('#tabmenu');
@@ -604,7 +627,7 @@ return baseclass.extend({
 				function renderStatus(next,group) {
 					var panelDetails=expanded(panel);
 					dom.content(panel, content(page, next, refresh, writable)); restoreExpanded(panel,panelDetails); dom.content(error, []);
-					if(diagnosticView)diagnosticView.mmUpdate(group,next,writable);
+					if(categoryView)categoryView.mmUpdate(group,next,writable);
 					var identity = next.cluster && next.cluster.identity, key = identity ? identity.role + ':' + (identity.network_id || '') + ':' +
 						(identity.joining && identity.joining.status || '') + ':' + !!next.configured + ':' + !!next.mesh_enabled : 'legacy';
 					if (key !== formKey) {
@@ -618,25 +641,25 @@ return baseclass.extend({
 				}
 				function refresh(resetForms) {
 					if(resetForms===true)formKey=null;
-					var group=diagnosticView?diagnosticView.mmCurrent():page;
+					var group=categoryView?categoryView.mmCurrent():page;
 					if(pendingStatus[group])return pendingStatus[group];
-					pendingStatus[group]=loadStatus(diagnosticView?'diagnostics_'+group:page, 0,
-						diagnosticView?function() { return group===diagnosticView.mmCurrent(); }:null).then(function(next) {
-						if(!diagnosticView || group===diagnosticView.mmCurrent())renderStatus(next,group);
+					pendingStatus[group]=loadStatus(categoryView?(page==='advanced'?'advanced_':'diagnostics_')+group:page, 0,
+						categoryView?function() { return group===categoryView.mmCurrent(); }:null).then(function(next) {
+						if(!categoryView || group===categoryView.mmCurrent())renderStatus(next,group);
 						return next;
 					}).catch(function(e) {
-						if(diagnosticView && group!==diagnosticView.mmCurrent())return;
+						if(categoryView && group!==categoryView.mmCurrent())return;
 						dom.content(error,E('p',{'class':'alert-message warning'},[_('Status update failed: %s').format(e.message)]));
 					}).finally(function() { delete pendingStatus[group]; });
 					return pendingStatus[group];
 				}
-				renderStatus(data,diagnosticView?'status':null);
+				renderStatus(data,categoryView?categoryView.mmCurrent():null);
 				poll.add(refresh, 3);
 				return E('div', { 'class': 'mm-page', 'data-mm-view': page, 'aria-label': _('Mesh Manager') }, [
-					E('link', { rel: 'stylesheet', href: L.resource('mesh_manager/mesh-manager.css')+'?v=20261016-diagnostic-tabs-2' }),
+					E('link', { rel: 'stylesheet', href: L.resource('mesh_manager/mesh-manager.css')+'?v=20261016-advanced-tabs-1' }),
 					tabs ? E('span') : title,
 					tabs ? E('span') : description,
-					error, panel, diagnosticView, forms
+					error, panel, categoryView, forms
 				]);
 			},
 			handleSave: null, handleSaveApply: null, handleReset: null
