@@ -345,28 +345,32 @@ function content(page, data, refresh, writable) {
 		if(identity && identity.role==='ap')facts.push([_('AP uplink port'),overrides.uplink || _('Unavailable')]);
 		result.push(widgets.section(_('This device'),[widgets.facts(facts)]));
 	}
-	if (page === 'wireless') result.push(widgets.section(_('Local radios'), [
-		E('div', { 'class': 'mm-radio-rows' }, cap.radios.map(function(r) {
-			var assigned = data.intent && data.intent.wifi.enabled && data.intent.wifi.radios.indexOf(r.name) >= 0;
-			return E('div', { 'class': 'mm-radio-row' }, [
-				E('strong', {}, [r.name]), E('span', { 'class': 'mm-radio-meta' }, [
-					_('Channel') + ' ' + text(r.channel), ' · ', _('Country') + ' ' + text(r.country)
-				]), widgets.status(assigned ? data.intent.wifi.ssid : _('Not managed'), assigned ? 'good' : 'neutral')
-			]);
-		}))
-	]));
-	if (page === 'wireless' && data.local.roaming) {
+	if (page === 'wireless') {
 		var roaming = data.local.roaming;
-		var roamingLabel = !roaming.installed ? _('usteer is not installed') : roaming.running == null ? _('Unavailable') :
+		var roamingLabel = !roaming ? _('Unavailable') : !roaming.installed ? _('usteer is not installed') : roaming.running == null ? _('Unavailable') :
 			!roaming.managed ? roaming.running ? _('Running outside Mesh management') : _('Not managed') :
 			!roaming.healthy ? _('Steering configuration is not effective') : roaming.requested ? _('Enabled') : _('Disabled');
-		result.push(widgets.section(_('Roaming assistance'), [
-			widgets.facts([[_('Status'), widgets.status(roamingLabel, roaming.managed && !roaming.healthy ? 'warning' : roaming.healthy ? 'good' : 'neutral')]]),
-			widgets.details(_('Backend details'), [widgets.facts([
-				[_('Backend'), 'usteer ' + (roaming.version || _('Unknown'))],
-				[_('Communication interfaces'), (roaming.interfaces || []).join(', ') || '-'],
-				[_('Policy support'), roaming.supported ? _('Supported') : _('Unsupported')]
-			])])
+		result.push(E('section', { 'class': 'mm-section mm-wireless-status' }, [
+			E('div', { 'class': 'mm-wireless-line' }, [
+				E('h3', {}, [_('Local radios')]),
+				cap.radios.length ? E('ul', { 'class': 'mm-wireless-radios' }, cap.radios.map(function(r) {
+					var assigned = data.intent && data.intent.wifi.enabled && data.intent.wifi.radios.indexOf(r.name) >= 0;
+					return E('li', { 'class': 'mm-radio-entry' }, [E('strong', {}, [r.name]),
+						widgets.status(assigned ? data.intent.wifi.ssid : _('Not managed'), assigned ? 'good' : 'neutral'),
+						E('span', { 'class': 'mm-radio-meta' }, [_('Channel') + ' ' + text(r.channel) + ' · ' + _('Country') + ' ' + text(r.country)])]);
+				})) : E('span', { 'class': 'mm-muted' }, [_('Unavailable')])
+			]),
+			E('div', { 'class': 'mm-wireless-line' }, [
+				E('h3', {}, [_('Roaming assistance')]),
+				E('div', { 'class': 'mm-roaming-status' }, [
+					widgets.status(roamingLabel, roaming && roaming.managed && !roaming.healthy ? 'warning' : roaming && roaming.healthy ? 'good' : 'neutral'),
+					roaming ? widgets.facts([
+						[_('Backend'), 'usteer ' + (roaming.version || _('Unknown'))],
+						[_('Communication interfaces'), (roaming.interfaces || []).join(', ') || '-'],
+						[_('Policy support'), roaming.supported ? _('Supported') : _('Unsupported')]
+					]) : null
+				])
+			])
 		]));
 	}
 	if (page === 'backhaul') {
